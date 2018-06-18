@@ -1,0 +1,9 @@
+#.gitignore
+
+#~ files
+*.*~
+
+#Directories
+__pycache__/
+.ipynb_checkpoints/
+old_code/

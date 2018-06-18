@@ -1,0 +1,64 @@
+declarations:
+  name: 'partial_adj1_linear'
+  variables: [kp,inv,qq,rk,mushk,betashk,dinv,invrate]
+  shocks: [eps_mu,eps_beta]
+  parameters: [beta,delta,alpha,a,b,gamma_A,gamma_V,rhomu,stdmu,rhobeta,stdbeta]
+  para_func: [gamgrss,kss,inv2cap,iss,phii]
+  
+equations:
+
+  model:
+    # capital 
+    - kp = (1-delta)/gamgrss*kp(-1) + inv2cap*inv
+    
+    #investment supply
+    - qq = -mushk + phii*(inv-inv(-1)-beta*(inv(+1)-inv))
+    
+    #K euler
+    - qq = (1-beta*(1-delta)/gamgrss)*rk(+1) + (beta*(1-delta)/gamgrss)*qq(+1) + betashk
+  
+    #MPK
+    - rk = -(1-alpha)*kp(-1)
+    
+    #MEI shock
+    - mushk = rhomu * mushk(-1) + eps_mu
+    
+    #Discount rate shock
+    - betashk = rhobeta * betashk(-1) + eps_beta
+    
+    #Change in Investment
+    - dinv = inv - inv(-1)
+    
+    #Investment to Capital
+    - invrate = inv - kp(-1)
+    
+calibration:
+
+  parafunc:
+    gamgrss : exp(gamma_A+gamma_V)
+    kss : gamgrss*(alpha*beta/(gamgrss-beta*(1-delta)))^(1/(1-alpha))
+    inv2cap : 1-(1-delta)/gamgrss
+    iss : inv2cap*kss
+    phii : a^2*b
+    
+  parameters:
+    beta : 0.99
+    delta : 0.025
+    alpha : 0.3
+    a : 0.63
+    b : 10.0
+    gamma_A : 0.002
+    gamma_V : 0.003
+    rhomu : 0.7
+    stdmu : 0.01
+    rhobeta : 0.9
+    stdbeta : 0.0006
+    
+  covariances:
+    eps_mu : stdmu^2
+    eps_beta : stdbeta^2
+    
+estimation:
+  nothing:
+
+  
