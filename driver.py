@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import partial_adj1 as pa
 import importlib
-from sys import exit
+import sys  
 importlib.reload(pa)
 
 #Read in nonlinear model and parameter values
@@ -14,15 +14,14 @@ phiitilde = params['b']*params['a']**2
 paramplus = pa.get_steady(params)
 
 #plot linex adjustment costs
-import matplotlib.pyplot as plt
-inv = np.arange(0.8,1.2,0.0025)
-adj = inv*paramplus['b']*(np.exp(paramplus['a']*(inv-1.0))-paramplus['a']*(inv-1.0)-1)
-fig1, axs1 = plt.subplots(1,1)
-axs1.plot(inv,adj,'k-',linewidth=3)
-axs1.set_title('Linex Adjustment Cost Function')
-axs1.set_xlabel('$x_t$')
-axs1.set_ylabel('$S(x_t)x_t$')
-plt.show()
+# inv = np.arange(0.8,1.2,0.0025)
+# adj = inv*paramplus['b']*(np.exp(paramplus['a']*(inv-1.0))-paramplus['a']*(inv-1.0)-1)
+# fig1, axs1 = plt.subplots(1,1)
+# axs1.plot(inv,adj,'k-',linewidth=3)
+# axs1.set_title('Linex Adjustment Cost Function')
+# axs1.set_xlabel('$x_t$')
+# axs1.set_ylabel('$S(x_t)x_t$')
+# plt.show()
 
 #Solve linear model
 import dsge
@@ -33,9 +32,13 @@ for i,x in enumerate(params):
     p0[i] = params[x]
 
 #get linear decision rule
+#innov = ['eps_beta','eps_mu']
 innov = ['eps_beta']
 ninnov = len(innov)
-msv = ['kp','inv','betashk']  
+if ninnov == 1:
+    msv = ['kp','inv','betashk']
+else:
+    msv = ['kp','inv','betashk','mushk']  
 nmsv = len(msv)
 pdv = ['dinv','qq']
 npdv = len(pdv)
@@ -51,15 +54,19 @@ lcoeff = Aa.copy()
 lcoeff[:,-1] = Aa[:,-1]/paramplus['rhobeta']
 
 #solve nonlinear model
-ncheb = 3*np.ones(nmsv-1,dtype=int)
+if nmsv == 3:
+    ncheb = 3*np.ones(nmsv-1,dtype=int)
+    msvmax = np.zeros(nmsv-1)
+else:
+    ncheb = 3*np.ones(nmsv-2,dtype=int)
+    msvmax = np.zeros(nmsv-2)
 ngrid = np.ones(ninnov,dtype=int)
-ngrid[0] = 7
-msvmax = np.zeros(nmsv-1)
 msvmax[0] = 0.1
 msvmax[1] = 0.2
 maxstd = 2.5
+ngrid[0] = 7
 if ninnov > 1:
-    sys.exit('Stopping without solving nonlinear model')
+    ngrid[1] = 3
 eqswitch = 0
 poly0 = pa.initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
 poly0 = pa.get_griddetails(poly0,paramplus)
@@ -69,7 +76,7 @@ poly1 = pa.initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
 poly1 = pa.get_griddetails(poly1,paramplus)
 acoeff1,convergence = pa.get_coeffs(acoeff0,paramplus,poly1,step=0.5)
 if (convergence == False):
-    exit('Failed to solve nonlinear model')
+    sys.exit('Failed to solve nonlinear model')
 
 #Get IRFs
 import pandas as pd
@@ -80,10 +87,12 @@ for x in varlist:
     endogvarm1[x] = paramplus[x]
     endogvarm1[x+'_d'] = 0.0
 endogvarm1['beta_d'] = 0.012
+#endogvarm1['mu_d'] = 0.012
 endogvarm1['inv_d'] = 0.0
 endogvarm1_b = endogvarm1.copy()
 innov = np.zeros([poly1['ne']])
 innov[0] = 2.0
+#innov[1] = 2.0
 df1 = pa.simulate_irf(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist)
 df2 = pa.simulate_irf(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist)
 endogvarm1['beta_d'] = -endogvarm1['beta_d']
@@ -92,6 +101,7 @@ endogvarm1['inv_d'] = -endogvarm1['inv_d']
 endogvarm1_b['inv_d'] = endogvarm1['inv_d']
 #absolute value of negative shock
 innov[0] = -innov[0]
+#innov[1] = -innov[1]
 df3 = pa.simulate_irf(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist)
 df3 = -df3
 

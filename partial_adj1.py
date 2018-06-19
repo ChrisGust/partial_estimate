@@ -24,6 +24,8 @@ def initialize_poly(nfunc,ncheb,ngrid,msvmax,shockmaxstd,eqswitch):
     poly['rhos'] = np.zeros(poly['ne'])
     poly['stds'] = np.zeros(poly['ne'])
     poly['nquad'][0] = 3
+    if poly['ninnov'] > 1:
+        poly['nquad'][1] = 2
     poly['ns'] = np.prod(poly['ngrid'])
     poly['nqs'] = np.prod(poly['nquad'])
     poly['pgrid'],poly['bbt'],poly['bbtinv'] = po.nonsparsegrid(poly['nmsv'],poly['npoly'],poly['ncheb'])
@@ -50,9 +52,9 @@ def get_quadstates(poly,paramplus):
     #print(meanpreserve)
     for j in np.arange(nqs):
         for i in np.arange(ns):
-            sfut[i,j,0] = paramplus['rhobeta']*poly['exoggrid'][i] + paramplus['stdbeta']*quadgrid[j,0] #+ meanpreserve
+            sfut[i,j,0] = paramplus['rhobeta']*poly['exoggrid'][i,0] + paramplus['stdbeta']*quadgrid[j,0] #+ meanpreserve
             if ne == 2:
-                sfut[i,j,1] = paramplus['rhomu']*poly['exoggrid'][i] + paramplus['stdmu']*quadgrid[j,0]
+                sfut[i,j,1] = paramplus['rhomu']*poly['exoggrid'][i,1] + paramplus['stdmu']*quadgrid[j,0]
             ind_sfut[i,j,:] = po.get_index(sfut[i,j,:],ne,poly['ngrid'],poly['steps'],poly['bounds'])    
     return(sfut,ind_sfut,quadweight)
 
@@ -145,11 +147,10 @@ def modelvariables(polyapprox,xtilm1,shocks,paramplus,eqswitch,ne):
     dvar['invrate'] = dvar['inv'] - kk
     lvar['invrate'] = np.log(paramplus['gamma']) + np.log(lvar['inv']) - kk - np.log(paramplus['kp'])
         
-    if (eqswitch == 0):
+    if (eqswitch == 0):  #linearized capital accumulation
         dvar['kp'] = ((1-paramplus['delta'])/paramplus['gamma'])*kk+(paramplus['inv']/paramplus['kp'])*(dvar['inv']+dvar['mu'])
         lvar['kp'] = np.exp(dvar['kp']+np.log(paramplus['kp']))
-    else:
-        #stemp = 
+    else:  #nonlinear capital accumulation
         lvar['kp'] = (1-paramplus['delta'])*( np.exp(kk+np.log(paramplus['kp']))/paramplus['gamma'] ) + lvar['inv']
         dvar['kp'] = np.log(lvar['kp'])-np.log(paramplus['kp'])
     return(dvar,lvar)
@@ -186,8 +187,8 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
             exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*dvarp['qq'] 
             exp_ieq = exp_ieq + poly['quadweight'][j]*paramplus['beta']*(dvarp['inv']-dvar['inv'])
         else:       
-            #exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*lvarp['qq']
-            exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*dvarp['qq'] 
+            exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*lvarp['qq']
+            #exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*dvarp['qq'] 
             Sprimep = paramplus['b']*paramplus['a']*(np.exp(paramplus['a']*(lvarp['inv']/lvar['inv']-1))-1)
             exp_ieq = exp_ieq + poly['quadweight'][j]*lvar['beta']*lvarp['qq']*lvarp['mu']*Sprimep*(lvarp['inv']/lvar['inv'])**2
     polynew = np.zeros(poly['nfunc'])
@@ -201,9 +202,9 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
         stemp = (lvar['qq']*lvar['mu']-1.0+exp_ieq)/(lvar['qq']*lvar['mu']*np.exp(dvar['inv']-invm1))  
         sarg = 1.0+(1.0/paramplus['a'])*np.log(1.0+stemp/(paramplus['b']*paramplus['a']))
         polynew[0] = np.log(sarg)
-        #rkp = (paramplus['alpha']/paramplus['gamma'])*(lvar['kp']/paramplus['gamma'])**(paramplus['alpha']-1)
-        #polynew[1] = np.log( lvar['beta']*(rkp+exp_qeq) )
-        polynew[1] = -(1-paramplus['beta']*qweight)*(1.0-paramplus['alpha'])*dvar['kp'] + paramplus['beta']*exp_qeq + dvar['beta']
+        rkp = (paramplus['alpha']/paramplus['gamma'])*(lvar['kp']/paramplus['gamma'])**(paramplus['alpha']-1)
+        polynew[1] = np.log( lvar['beta']*(rkp+exp_qeq) )
+        #polynew[1] = -(1-paramplus['beta']*qweight)*(1.0-paramplus['alpha'])*dvar['kp'] + paramplus['beta']*exp_qeq + dvar['beta']
     res = np.sum(np.abs(polynew-polycur))/poly['nfunc']
     # if (gridindex == 1):
     #     print('---------------------')
@@ -315,60 +316,60 @@ def simulate_irf(TT,endogvarm1_shk,endogvarm1_base,innov_shk,paramplus,acoeff,po
 #Model Development
 ###########################################################################
 
-#Get steady state
-params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 0.63,'b' : 10.0,'gamma_A' : 0.002,'gamma_V': 0.003,'rhomu': 0.7,'stdmu' : 0.01,\
-           'rhobeta' : 0.9, 'stdbeta': 0.001}
-phiitilde = params['b']*params['a']**2
-params['a'] = -10.0
-params['b'] = phiitilde/(params['a']**2)
-paramplus = get_steady(params)
+# #Get steady state
+# params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 0.63,'b' : 10.0,'gamma_A' : 0.002,'gamma_V': 0.003,'rhomu': 0.7,'stdmu' : 0.01,\
+#            'rhobeta' : 0.9, 'stdbeta': 0.001}
+# phiitilde = params['b']*params['a']**2
+# params['a'] = -10.0
+# params['b'] = phiitilde/(params['a']**2)
+# paramplus = get_steady(params)
 
-#Solve linear model
-import dsge
-partial=dsge.DSGE.DSGE.read('partial_adj1_linear.yaml')
-partiallin = partial.compile_model()
-p0 = np.zeros(len(params))
-for i,x in enumerate(params):
-    p0[i] = params[x]
+# #Solve linear model
+# import dsge
+# partial=dsge.DSGE.DSGE.read('partial_adj1_linear.yaml')
+# partiallin = partial.compile_model()
+# p0 = np.zeros(len(params))
+# for i,x in enumerate(params):
+#     p0[i] = params[x]
 
-# #get linear decision rule
-innov = ['eps_beta']
-ninnov = len(innov)
-msv = ['kp','inv','betashk']  
-nmsv = len(msv)
-pdv = ['dinv','qq']
-npdv = len(pdv)
-(tt,rr,cc) = partiallin.solve_LRE(p0)
-Aa = np.zeros([npdv,nmsv])
-Bb = np.zeros([npdv,ninnov])
-for i in np.arange(npdv):
-    for j in np.arange(nmsv):
-        Aa[i,j] = tt[partiallin.state_names.index(pdv[i]),partiallin.state_names.index(msv[j])]
-    for k in np.arange(ninnov):   
-        Bb[i,k] = rr[partiallin.state_names.index(pdv[i]),partiallin.shock_names.index(innov[k])]
-lcoeff = Aa.copy()
-lcoeff[:,-1] = Aa[:,-1]/paramplus['rhobeta']
+# # #get linear decision rule
+# innov = ['eps_beta']
+# ninnov = len(innov)
+# msv = ['kp','inv','betashk']  
+# nmsv = len(msv)
+# pdv = ['dinv','qq']
+# npdv = len(pdv)
+# (tt,rr,cc) = partiallin.solve_LRE(p0)
+# Aa = np.zeros([npdv,nmsv])
+# Bb = np.zeros([npdv,ninnov])
+# for i in np.arange(npdv):
+#     for j in np.arange(nmsv):
+#         Aa[i,j] = tt[partiallin.state_names.index(pdv[i]),partiallin.state_names.index(msv[j])]
+#     for k in np.arange(ninnov):   
+#         Bb[i,k] = rr[partiallin.state_names.index(pdv[i]),partiallin.shock_names.index(innov[k])]
+# lcoeff = Aa.copy()
+# lcoeff[:,-1] = Aa[:,-1]/paramplus['rhobeta']
 
-# #solve nonlinear model
-ncheb = 3*np.ones(nmsv-1,dtype=int)
-ngrid = np.ones(ninnov,dtype=int)
-ngrid[0] = 7
-msvmax = np.zeros(nmsv-1)
-msvmax[0] = 0.1
-msvmax[1] = 0.2
-maxstd = 2.5
-if ninnov > 1:
-    sys.exit('Stopping without solving nonlinear model')
-eqswitch = 0
-poly0 = initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
-poly0 = get_griddetails(poly0,paramplus)
-acoeff0 = get_initcoeffs(lcoeff,poly0)
-eqswitch = 1
-poly1 = initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
-poly1 = get_griddetails(poly1,paramplus)
-acoeff1,convergence = get_coeffs(acoeff0,paramplus,poly1,step=0.5)
-if (convergence == False):
-     sys.exit('Failed to solve nonlinear model')
+# # #solve nonlinear model
+# ncheb = 3*np.ones(nmsv-1,dtype=int)
+# ngrid = np.ones(ninnov,dtype=int)
+# ngrid[0] = 7
+# msvmax = np.zeros(nmsv-1)
+# msvmax[0] = 0.1
+# msvmax[1] = 0.2
+# maxstd = 2.5
+# if ninnov > 1:
+#     sys.exit('Stopping without solving nonlinear model')
+# eqswitch = 0
+# poly0 = initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
+# poly0 = get_griddetails(poly0,paramplus)
+# acoeff0 = get_initcoeffs(lcoeff,poly0)
+# eqswitch = 1
+# poly1 = initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
+# poly1 = get_griddetails(poly1,paramplus)
+# acoeff1,convergence = get_coeffs(acoeff0,paramplus,poly1,step=0.5)
+# if (convergence == False):
+#      sys.exit('Failed to solve nonlinear model')
 
 
 
