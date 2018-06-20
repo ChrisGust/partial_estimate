@@ -1,0 +1,81 @@
+\documentclass[11pt,fleqn]{article}
+
+\usepackage[letterpaper, portrait, margin=0.75in]{geometry}
+\usepackage{amsmath, amsbsy, amsfonts, setspace}
+
+\setcounter{MaxMatrixCols}{10}
+
+%\input{tcilatex}
+
+\begin{document}
+
+
+\doublespacing
+%\onehalfspacing
+
+\begin{center}
+\textbf{\Large Notes on Nonlinear Dynamics and Investment}
+\end{center}
+
+These notes describe a partial equilibrium model of investment with adjustment costs on the change in investment.  These adjustment costs are asymmetric for two reasons.  First, we allow for a flexible linex function.  Second, the adjustment costs are paid as a fraction of the level of investment.  For low (high) levels of investment, the adjustment costs are small (large). 
+
+\section{Firms}
+
+There is a representative firm that owns its capital and uses it along with labor to produce output, $Y_t$ according to a Cobb-Douglas production function:
+\begin{equation}
+Y_t = A_t K^{\alpha}_t H^{1-\alpha}_t,  \label{production_function}
+\end{equation}
+where $A_t$ denotes technological change that affects aggregate production.
+The firm purchases $X_t$ units of an investment good which is transformed into productive investment, $I_t$, according to:
+\begin{equation}
+I_t = V_t X_t,
+\end{equation}
+where $V_t$ represents investment-specific technological change. $I_t$ augments a firm's capital according to:
+\begin{equation} 
+K_{t+1} = (1-\delta) K_t +\left[1- \mu_t S\left(\frac{I_t}{I_{t-1}}\right) \right] I_t,  \label{capital_accumulation}
+\end{equation}
+where $\mu_t$ is a shock to the marginal efficiency of investment.  The investment adjustment cost, $S\left(\frac{I_t}{I_{t-1}}\right)$ is specified by the linex function:
+Each period, the firm hires labor at the wage, $W_t$, and an investment good.  The investment good has the same price as the output good, since there is a one-to-one technology for transforming output into the investment good.  To use the investment good for production next period, a firm faces adjustment costs or installation costs of transforming the investment good into new capital.  We follow the DSGE literature and assume that it is costly to adjust investment relative to last period's level of investment so that capital at the end of the period is given by:
+
+where $\delta$ is the depreciation rate of existing capital and $\mu_t$ is an exogenous shock representing the marginal efficiency of installed investment.  A firm maximizes the discounted stream of profits by choosing contingency plans for $K_{t+1}$, $I_t$, and $H_t$:
+\begin{equation}
+\max E_0 \sum^{\infty}_{t=0} \beta^t \Lambda_t \left[Y_t - w_t H_t - I_t  \right],
+\end{equation}
+subject to equations (\ref{production_function})and (\ref{capital_accumulation}) and taking the real wage $w_t$ and stochastic discount factor, $\beta^t \Lambda_t$ as given.  In an equilibrium in which labor is in supplied inelastically to firms and the supply of labor is normalized to one, the first order conditions associated with this problem are:
+\begin{equation}
+w_t = (1-\alpha) Y_t
+\end{equation}
+\begin{equation}
+q_t = E_t \left\{ m_{t+1} \left[ \alpha K^{\alpha-1}_{t+1} + (1-\delta) q_{t+1} \right]  \right\} \label{K_demand}
+\end{equation}
+\begin{equation}
+q_t \mu_t \left[ 1 - \frac{\phi_I}{2}\left(\frac{I_t}{I_{t-1}}-1\right)^2 - \phi_I \left(\frac{I_t}{I_{t-1}}-1\right) \frac{I_t}{I_{t-1}} \right]
++ E_t \left[ m_{t+1} q_{t+1} \mu_{t+1} \phi_I \left(\frac{I_{t+1}}{I_{t}}-1\right) \frac{I^2_{t+1}}{I^2_{t}} \right] =1,  \label{K_supply}
+\end{equation}
+where $m_{t+1} = \beta \frac{\Lambda_{t+1}}{\Lambda_t}$.  Equation (\ref{K_demand}) can be thought of as tracing out a firm's demand for capital as it implies that a firm's demand for capital, $K_{t+1}$, is inversely related to its price, $q_t$, holding all else equal.  Equation (\ref{K_supply}) can be viewed as determining the supply of capital, as this equation and the capital accumulation equation implicitly define a positive relationship between $q_t$ and $K_{t+1}$.  These relationships are easiest to see after taking a first-order approximation to the model, a task we turn to next.
+
+\section{Approximating the Model's Dynamics}
+
+We first begin by taking a first-approximation to the model to show how equation (\ref{K_demand}) can be viewed as the capital demand equation and equation (\ref{K_demand}) as the capital supply equation.  A first-order approximation of equations (\ref{K_demand}), (\ref{capital_accumulation}), and (\ref{K_supply}) yields:
+\begin{gather}
+\hat{q}_t = -\hat{r}_{t} - (1-\alpha)(1-\frac{1-\delta}{r}) \hat{K}_{t+1} + \frac{1-\delta}{r} E_t \hat{q}_{t+1}  \label{Klin_demand} \\
+\hat{K}_{t+1} = (1-\delta) \hat{K}_t + \delta \left( \hat{I}_t + \hat{\mu}_t \right) \label{Klin_accumulation}  \\
+\hat{q}_t + \hat{\mu}_t = \phi_I \left( \hat{I}_t - \hat{I}_{t-1} \right) - \frac{\phi_I}{r}  E_t \left( \hat{I}_{t+1} - \hat{I}_{t} \right)  \label{Klin_supply}
+\end{gather}
+where $r^{-1}_t = E_t m_{t+1}$.
+A second order approximation of the capital demand equation yields:
+\begin{gather}
+\hat{q}_t + 0.5 \hat{q}^2_t  = -\hat{r}_{t} + 0.5 \hat{r}^2_{t} - (1-\alpha)(1-\frac{1-\delta}{r}) \left[ \hat{K}_{t+1} - (1-\alpha) \left(0.5 \hat{K}^2_{t+1} + \hat{r}_t \hat{K}_{t+1} \right) \right] + \\
+\frac{1-\delta}{r} E_t \left[ \hat{q}_{t+1} +0.5 \hat{q}^2_{t+1} - \hat{r}_t \hat{q}_{t+1}\right] \notag 
+\end{gather}
+The capital supply block is given by:
+\begin{gather}
+\hat{K}_{t+1} + 0.5 \hat{K}^2_{t+1} = (1-\delta) \left[\hat{K}_t + 0.5 \hat{K}^2_{t} \right] + \delta \left[ \left( \hat{I}_t + \hat{\mu}_t \right) + 0.5 \left(\hat{I}_t +\hat{\mu}_t \right)^2 - 0.5 \phi_I \left( \hat{I}_t - \hat{I}_{t-1} \right)^2 \right]  \\
+\hat{q}_t + \hat{\mu}_t + 0.5 \left(\hat{q}_t + \hat{\mu}_t \right)^2 = \phi_I \left[ \hat{I}_t - \hat{I}_{t-1} + \left(\hat{q}_t + \hat{\mu}_t \right) \left(  \hat{I}_t - \hat{I}_{t-1}\right) \right] + 2 \phi_I \left(  \hat{I}_t - \hat{I}_{t-1}\right)^2 - \\  
+\frac{\phi_I}{r} E_t \left(1+ \hat{q}_{t+1} + \hat{\mu}_{t+1} - \hat{r}_t \right) \left( \hat{I}_{t+1} - \hat{I}_{t} \right) - \frac{5}{2} \frac{\phi_I}{r}  E_t \left( \hat{I}_{t+1} - \hat{I}_{t} \right)^2, \notag
+\end{gather}
+where we use certainty equivalence to replace the expectation operator where relevant in the above equations.
+
+
+
+\end{document}

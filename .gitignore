@@ -2,6 +2,10 @@
 
 #~ files
 *.*~
+*.aux
+*.log
+*.pdf
+*.synctex.gz
 
 #Directories
 __pycache__/
