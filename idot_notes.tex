@@ -28,20 +28,22 @@ Y_t = A_t K^{\alpha}_t H^{1-\alpha}_t,  \label{production_function}
 where $A_t$ denotes technological change that affects aggregate production.
 The firm purchases $X_t$ units of an investment good which is transformed into productive investment, $I_t$, according to:
 \begin{equation}
-I_t = V_t X_t,
+I_t = V_t X_t, \label{inv_production}
 \end{equation}
 where $V_t$ represents investment-specific technological change. $I_t$ augments a firm's capital according to:
 \begin{equation} 
 K_{t+1} = (1-\delta) K_t +\left[1- \mu_t S\left(\frac{I_t}{I_{t-1}}\right) \right] I_t,  \label{capital_accumulation}
 \end{equation}
-where $\mu_t$ is a shock to the marginal efficiency of investment.  The investment adjustment cost, $S\left(\frac{I_t}{I_{t-1}}\right)$ is specified by the linex function:
-Each period, the firm hires labor at the wage, $W_t$, and an investment good.  The investment good has the same price as the output good, since there is a one-to-one technology for transforming output into the investment good.  To use the investment good for production next period, a firm faces adjustment costs or installation costs of transforming the investment good into new capital.  We follow the DSGE literature and assume that it is costly to adjust investment relative to last period's level of investment so that capital at the end of the period is given by:
-
-where $\delta$ is the depreciation rate of existing capital and $\mu_t$ is an exogenous shock representing the marginal efficiency of installed investment.  A firm maximizes the discounted stream of profits by choosing contingency plans for $K_{t+1}$, $I_t$, and $H_t$:
+where $\delta$ is the depreciation rate of existing capital and $\mu_t$ is a shock to the marginal efficiency of investment.  The investment adjustment cost, $S\left(\frac{I_t}{I_{t-1}}\right)$, is specified by the linex function:
 \begin{equation}
-\max E_0 \sum^{\infty}_{t=0} \beta^t \Lambda_t \left[Y_t - w_t H_t - I_t  \right],
+S\left(\frac{I_t}{I_{t-1}}\right) =  b \left\{\exp\left[ a \left(\frac{I_t}{I_{t-1}}-1\right)\right]-a\left(\frac{I_t}{I_{t-1}}-1\right)-1\right\}.
 \end{equation}
-subject to equations (\ref{production_function})and (\ref{capital_accumulation}) and taking the real wage $w_t$ and stochastic discount factor, $\beta^t \Lambda_t$ as given.  In an equilibrium in which labor is in supplied inelastically to firms and the supply of labor is normalized to one, the first order conditions associated with this problem are:
+
+A firm also hires its labor input, $H_t$, in a competitive market.  It maximizes the discounted stream of profits by choosing contingency plans for $K_{t+1}$, $X_t$, and $H_t$:
+\begin{equation}
+\max E_0 \sum^{\infty}_{t=0} m_t  \left[Y_t - w_t H_t - X_t  \right].
+\end{equation}
+where $m_t$ is the firm's stochastic discount factor which it takes as given along with the real wage $w_t$. It maximizes this objective subject to equations (\ref{production_function})-(\ref{capital_accumulation}).  In an equilibrium in which labor is in supplied inelastically to firms and the supply of labor is normalized to one, the first order conditions associated with this problem are:
 \begin{equation}
 w_t = (1-\alpha) Y_t
 \end{equation}
