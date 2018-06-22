@@ -284,16 +284,23 @@ def decr(endogvarm1,innov,paramplus,acoeff,poly):
         endogvar[x+'_d'] = dvar[x]
     return(endogvar)
 
-def simulate_irf(TT,endogvarm1_shk,endogvarm1_base,innov_shk,paramplus,acoeff,poly,varlist):
-    #Compute IRFS as deviation from unshocked baseline.
+def simulate(TT,endogvarm1_shk,endogvarm1_base,innov_shk,paramplus,acoeff,poly,varlist,irfswitch):
+    #Simulates data or compute IRFS  as deviation from unshocked baseline depending on irfswitch
     nvars = len(varlist)
     ne = poly['ne']
     invdf = pd.DataFrame(np.zeros([TT,nvars]),columns=varlist)
     invdf['mu_innov'] = 0.0
     invdf['beta_innov'] = 0.0
-    invdf.loc[0,'beta_innov'] = innov_shk[0]
-    if ne > 1:
-        invdf.loc[0,'mu_innov'] = innov_shk[1]
+    if irfswitch == 0:
+        rng = np.random.RandomState(1234)
+        innovall = rng.randn(ne,TT)
+        invdf['beta_innov'] = innovall[0,:]
+        if ne > 1:
+            invdf['mu_innov'] = innovall[1,:]
+    else:
+        invdf.loc[0,'beta_innov'] = innov_shk[0]
+        if ne > 1:
+            invdf.loc[1,'mu_innov'] = innov_shk[1]
     innov = np.zeros(poly['ne']) 
     endogvarm1_s = endogvarm1_shk
     endogvarm1_b = endogvarm1_base
@@ -307,69 +314,15 @@ def simulate_irf(TT,endogvarm1_shk,endogvarm1_base,innov_shk,paramplus,acoeff,po
             innov[1] = 0.0
         endogvar_b = decr(endogvarm1_b,innov,paramplus,acoeff,poly)
         for x in varlist:
-            invdf.loc[tt,x] = 100.0*(endogvar[x+'_d']-endogvar_b[x+'_d'])
+            if irfswitch == 0:
+                invdf.loc[tt,x] = 100.0*(endogvar[x+'_d']-endogvar_b[x+'_d'])
+            else:
+                invdf.loc[tt,x] = 100.0*endogvar[x+'_d']
         endogvarm1_s = endogvar
         endogvarm1_b = endogvar_b
     return(invdf)
 
-##########################################################################
-#Model Development
-###########################################################################
 
-# #Get steady state
-# params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 0.63,'b' : 10.0,'gamma_A' : 0.002,'gamma_V': 0.003,'rhomu': 0.7,'stdmu' : 0.01,\
-#            'rhobeta' : 0.9, 'stdbeta': 0.001}
-# phiitilde = params['b']*params['a']**2
-# params['a'] = -10.0
-# params['b'] = phiitilde/(params['a']**2)
-# paramplus = get_steady(params)
-
-# #Solve linear model
-# import dsge
-# partial=dsge.DSGE.DSGE.read('partial_adj1_linear.yaml')
-# partiallin = partial.compile_model()
-# p0 = np.zeros(len(params))
-# for i,x in enumerate(params):
-#     p0[i] = params[x]
-
-# # #get linear decision rule
-# innov = ['eps_beta']
-# ninnov = len(innov)
-# msv = ['kp','inv','betashk']  
-# nmsv = len(msv)
-# pdv = ['dinv','qq']
-# npdv = len(pdv)
-# (tt,rr,cc) = partiallin.solve_LRE(p0)
-# Aa = np.zeros([npdv,nmsv])
-# Bb = np.zeros([npdv,ninnov])
-# for i in np.arange(npdv):
-#     for j in np.arange(nmsv):
-#         Aa[i,j] = tt[partiallin.state_names.index(pdv[i]),partiallin.state_names.index(msv[j])]
-#     for k in np.arange(ninnov):   
-#         Bb[i,k] = rr[partiallin.state_names.index(pdv[i]),partiallin.shock_names.index(innov[k])]
-# lcoeff = Aa.copy()
-# lcoeff[:,-1] = Aa[:,-1]/paramplus['rhobeta']
-
-# # #solve nonlinear model
-# ncheb = 3*np.ones(nmsv-1,dtype=int)
-# ngrid = np.ones(ninnov,dtype=int)
-# ngrid[0] = 7
-# msvmax = np.zeros(nmsv-1)
-# msvmax[0] = 0.1
-# msvmax[1] = 0.2
-# maxstd = 2.5
-# if ninnov > 1:
-#     sys.exit('Stopping without solving nonlinear model')
-# eqswitch = 0
-# poly0 = initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
-# poly0 = get_griddetails(poly0,paramplus)
-# acoeff0 = get_initcoeffs(lcoeff,poly0)
-# eqswitch = 1
-# poly1 = initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
-# poly1 = get_griddetails(poly1,paramplus)
-# acoeff1,convergence = get_coeffs(acoeff0,paramplus,poly1,step=0.5)
-# if (convergence == False):
-#      sys.exit('Failed to solve nonlinear model')
 
 
 
