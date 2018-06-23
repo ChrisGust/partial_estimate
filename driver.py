@@ -8,7 +8,7 @@ importlib.reload(pa)
 
 #Read in nonlinear model and parameter values
 params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 4.6,'b' : 0.05,'gamma_A' : 0.00,'gamma_V': 0.00,'rhomu': 0.7,'stdmu' : 0.0025,\
-             'rhobeta' : 0.5, 'stdbeta': 0.003}
+             'rhobeta' : 0.5, 'stdbeta': 0.0035}
 phiitilde = params['b']*params['a']**2
 #params['a'] = -20.0
 #params['b'] = phiitilde/(params['a']**2)
@@ -80,9 +80,18 @@ acoeff1,convergence = pa.get_coeffs(acoeff0,paramplus,poly1,step=0.5)
 if (convergence == False):
     sys.exit('Failed to solve nonlinear model')
 
+
+
 #Get IRFs
-irfshock = 1
-if irfshock == 1:
+outputswitch = 0
+dinvcoeff_nl = pd.DataFrame(acoeff1[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
+dinvcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
+
+
+if outputswitch == 0:
+    print('Not generating IRFs or simulating data.')
+elif outputswitch == 1:
+    irfswitch = 1
     TT = 20
     varlist = ['kp','inv','qq','mu','beta','dinv','invrate']
     endogvarm1 = {x: 0.0 for x in varlist} 
@@ -136,7 +145,8 @@ if irfshock == 1:
     axs3[1,1].legend()
     plt.show()
 else:
-    TT = 100
+    irfswitch = 0
+    TT = 5000
     varlist = ['kp','inv','qq','mu','beta','dinv','invrate']
     endogvarm1 = {x: 0.0 for x in varlist} 
     for x in varlist:
@@ -146,7 +156,7 @@ else:
     innov = np.zeros([poly1['ne']])
     df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfshock)
     df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfshock)
-    
+    df2stats = df2.describe()
 
 
 
