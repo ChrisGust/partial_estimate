@@ -7,10 +7,10 @@ import polydef as po
 #Initialize Polynomial Used to approximate solution.
 ##############################################################
 
-def initialize_poly(nfunc,ncheb,ngrid,msvmax,shockmaxstd,eqswitch):
+def initialize_poly(nfunc,ncheb,ngrid,msvmax,shockmaxstd,eqswitch,shockswitch):
 #Returns some details of polynomial approximation (the ones that do not depend on model parameters).
 
-    poly = {'nfunc': nfunc, 'maxstd': shockmaxstd, 'eqswitch' : eqswitch}
+    poly = {'nfunc': nfunc, 'maxstd': shockmaxstd, 'eqswitch' : eqswitch, 'shockswitch' : shockswitch}
     poly['ne'] = len(ngrid)
     poly['nmsv'] = len(ncheb)
     if poly['ne'] > 2:
@@ -48,19 +48,21 @@ def get_quadstates(poly,paramplus):
     sfut = np.zeros([ns,nqs,ninnov])
     ind_sfut = np.zeros([ns,nqs,ne],dtype=int)
 
-    #meanpreserve = -paramplus['stdbeta']**2/(2*(1.0+paramplus['rhobeta']))
-    #print(meanpreserve)
     for j in np.arange(nqs):
         for i in np.arange(ns):
-            sfut[i,j,0] = paramplus['rhobeta']*poly['exoggrid'][i,0] + paramplus['stdbeta']*quadgrid[j,0] #+ meanpreserve
-            if ne == 2:
-                sfut[i,j,1] = paramplus['rhomu']*poly['exoggrid'][i,1] + paramplus['stdmu']*quadgrid[j,0]
+            if poly['shockswitch'] == 0:
+                sfut[i,j,0] = paramplus['rhobeta']*poly['exoggrid'][i,0] + paramplus['stdbeta']*quadgrid[j,0] #+ meanpreserve
+                if ne == 2:
+                    sfut[i,j,1] = paramplus['rhomu']*poly['exoggrid'][i,1] + paramplus['stdmu']*quadgrid[j,0]
+            else:
+                sfut[i,j,0] = paramplus['rhomu']*poly['exoggrid'][i,0] + paramplus['stdmu']*quadgrid[j,0] #+ meanpreserve
+                if ne == 2:
+                    sfut[i,j,1] = paramplus['rhobeta']*poly['exoggrid'][i,1] + paramplus['stdbeta']*quadgrid[j,0]
             ind_sfut[i,j,:] = po.get_index(sfut[i,j,:],ne,poly['ngrid'],poly['steps'],poly['bounds'])    
     return(sfut,ind_sfut,quadweight)
 
 def get_griddetails(poly,paramplus):
     #Return details of polynomial associated with constructing the grids used
-
     nmsv = poly['nmsv']
     poly['scmsv2xx'] = np.zeros([2*nmsv])
     poly['scxx2msv'] = np.zeros([2*nmsv])
@@ -70,16 +72,22 @@ def get_griddetails(poly,paramplus):
     poly['scxx2msv'][nmsv:2*nmsv] = poly['msvbounds'][0:nmsv] + 0.5*(poly['msvbounds'][nmsv:2*nmsv]-poly['msvbounds'][0:nmsv])
 
     #for the approximating function.
-    poly['rhos'][0] = paramplus['rhobeta']
-    poly['stds'][0] = paramplus['stdbeta']
-    if poly['ne'] == 2:
-        poly['rhos'][1] = paramplus['rhomu']
-        poly['stds'][1] = paramplus['stdmu']
+    if poly['shockswitch'] == 0:
+        poly['rhos'][0] = paramplus['rhobeta']
+        poly['stds'][0] = paramplus['stdbeta']
+        if poly['ne'] == 2:
+            poly['rhos'][1] = paramplus['rhomu']
+            poly['stds'][1] = paramplus['stdmu']
+    else:
+        poly['rhos'][0] = paramplus['rhomu']
+        poly['stds'][0] = paramplus['stdmu']
+        if poly['ne'] == 2:
+            poly['rhos'][1] = paramplus['rhobeta']
+            poly['stds'][1] = paramplus['stdbeta']
     
     poly['exoggrid'],poly['exogindex'],poly['steps'],poly['bounds'],poly['ind2poly'] = po.get_exoggrid(poly['ngrid'],poly['ne'], \
         poly['ns'],poly['rhos'],poly['stds'],poly['maxstd'])
-    #meanspread = -paramplus['stdbeta']**2/(2*(1.0+paramplus['rhobeta'])*(1.0-paramplus['rhobeta']))
-    poly['exoggrid'][:,0] = poly['exoggrid'][:,0] #+ meanspread
+    poly['exoggrid'][:,0] = poly['exoggrid'][:,0]
 
     poly['quadgrid'],poly['quadweight'] = po.get_quadgrid(poly['nquad'],poly['ninnov'],poly['nqs'])
     poly['sfutquad'],poly['ind_sfutquad'],poly['quadweights'] = get_quadstates(poly,paramplus)
@@ -122,7 +130,7 @@ def get_steady(params):
     paramplus.update(steady)
     return(paramplus)
 
-def modelvariables(polyapprox,xtilm1,shocks,paramplus,eqswitch,ne):
+def modelvariables(polyapprox,xtilm1,shocks,paramplus,eqswitch,shockswitch,ne):
     #return model variables given expected output and inflation.
     dvar = {}
     lvar = {}
@@ -133,14 +141,25 @@ def modelvariables(polyapprox,xtilm1,shocks,paramplus,eqswitch,ne):
     dvar['qq'] = polyapprox[1]
     lvar['inv'] = np.exp(dvar['inv']+np.log(paramplus['inv']))  
     lvar['qq'] = np.exp(dvar['qq']+np.log(paramplus['qq']))
-    dvar['beta'] = shocks[0]
-    lvar['beta'] = np.exp(dvar['beta']+np.log(paramplus['beta']))
-    if (ne == 2):
-        dvar['mu'] = shocks[1]
-        lvar['mu'] = np.exp(dvar['mu'])
+
+    if shockswitch == 0:
+        dvar['beta'] = shocks[0]
+        lvar['beta'] = np.exp(dvar['beta']+np.log(paramplus['beta']))
+        if (ne == 2):
+            dvar['mu'] = shocks[1]
+            lvar['mu'] = np.exp(dvar['mu'])
+        else:
+            dvar['mu'] = 0.0
+            lvar['mu'] = 1.0
     else:
-        dvar['mu'] = 0.0
-        lvar['mu'] = 1.0
+        dvar['mu'] = shocks[0]
+        lvar['mu'] = np.exp(dvar['mu'])
+        if (ne == 2):
+            dvar['beta'] = shocks[1]
+            lvar['beta'] = np.exp(dvar['beta']+np.log(paramplus['beta']))
+        else:
+            dvar['beta'] = 0.0
+            lvar['beta'] = paramplus['beta']
         
     dvar['dinv'] = dvar['inv']-invm1
     lvar['dinv'] = np.log(paramplus['gamma']) + dvar['dinv']
@@ -168,7 +187,7 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
     kk = msvm1[0]
     invm1 = msvm1[1]
     shocks = poly['exoggrid'][ind_state,:]
-    (dvar,lvar) = modelvariables(polycur,msvm1,shocks,paramplus,poly['eqswitch'],poly['ne'])
+    (dvar,lvar) = modelvariables(polycur,msvm1,shocks,paramplus,poly['eqswitch'],poly['shockswitch'],poly['ne'])
     msv = np.array([dvar['kp'],dvar['inv']])
     
     ind = npoly*ind_state+gridindex
@@ -182,13 +201,12 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
         xx1 = po.msv2xx(msv,nmsv,poly['scmsv2xx']) 
         polyfut = po.get_linspline(xx1,ss_futmat[j,:],ind_futmat[j,:],acoeff,poly['exoggrid'],poly['steps'],poly['nfunc'],\
             poly['ngrid'],npoly,nmsv,poly['ncheb'],ne)
-        (dvarp,lvarp) = modelvariables(polyfut,msv,ss_futmat[j,:],paramplus,poly['eqswitch'],poly['ne'])
+        (dvarp,lvarp) = modelvariables(polyfut,msv,ss_futmat[j,:],paramplus,poly['eqswitch'],poly['shockswitch'],poly['ne'])
         if (poly['eqswitch'] == 0):
             exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*dvarp['qq'] 
             exp_ieq = exp_ieq + poly['quadweight'][j]*paramplus['beta']*(dvarp['inv']-dvar['inv'])
         else:       
             exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*lvarp['qq']
-            #exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*dvarp['qq'] 
             Sprimep = paramplus['b']*paramplus['a']*(np.exp(paramplus['a']*(lvarp['inv']/lvar['inv']-1))-1)
             exp_ieq = exp_ieq + poly['quadweight'][j]*lvar['beta']*lvarp['qq']*lvarp['mu']*Sprimep*(lvarp['inv']/lvar['inv'])**2
     polynew = np.zeros(poly['nfunc'])
@@ -204,7 +222,6 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
         polynew[0] = invm1+np.log(sarg)
         rkp = (paramplus['alpha']/paramplus['gamma'])*(lvar['kp']/paramplus['gamma'])**(paramplus['alpha']-1)
         polynew[1] = np.log( lvar['beta']*(rkp+exp_qeq) )
-        #polynew[1] = -(1-paramplus['beta']*qweight)*(1.0-paramplus['alpha'])*dvar['kp'] + paramplus['beta']*exp_qeq + dvar['beta']
     res = np.sum(np.abs(polynew-polycur))/poly['nfunc']
     # if (gridindex == 1):
     #     print('---------------------')
@@ -271,14 +288,20 @@ def decr(endogvarm1,innov,paramplus,acoeff,poly):
     invm1 = endogvarm1['inv_d']
     msvm1 = np.array([kk,invm1])
     shocks = np.zeros(poly['ne'])
-    shocks[0] = paramplus['rhobeta']*endogvarm1['beta_d']+paramplus['stdbeta']*innov[0]
-    if poly['ne'] == 2:
-        shocks[1] = paramplus['rhomu']*endogvarm1['mu_d']+paramplus['stdmu']*innov[1]
+    if poly['shockswitch'] == 0:
+        shocks[0] = paramplus['rhobeta']*endogvarm1['beta_d']+paramplus['stdbeta']*innov[0]
+        if poly['ne'] == 2:
+            shocks[1] = paramplus['rhomu']*endogvarm1['mu_d']+paramplus['stdmu']*innov[1]
+    else:
+        shocks[0] = paramplus['rhomu']*endogvarm1['mu_d']+paramplus['stdmu']*innov[0]
+        if poly['ne'] == 2:
+            shocks[1] = paramplus['rhobeta']*endogvarm1['beta_d']+paramplus['stdbeta']*innov[1]
+            
     ind_shocks = po.get_index(shocks,poly['ne'],poly['ngrid'],poly['steps'],poly['bounds'])    
     xx1 = po.msv2xx(msvm1,poly['nmsv'],poly['scmsv2xx'])
     polycur = po.get_linspline(xx1,shocks,ind_shocks,acoeff,poly['exoggrid'],poly['steps'],poly['nfunc'],\
             poly['ngrid'],poly['npoly'],poly['nmsv'],poly['ncheb'],poly['ne'])
-    (dvar,lvar) = modelvariables(polycur,msvm1,shocks,paramplus,poly['eqswitch'],poly['ne'])
+    (dvar,lvar) = modelvariables(polycur,msvm1,shocks,paramplus,poly['eqswitch'],poly['shockswitch'],poly['ne'])
     for x in lvar:
         endogvar[x] = lvar[x]
         endogvar[x+'_d'] = dvar[x]
@@ -291,35 +314,66 @@ def simulate(TT,endogvarm1_shk,endogvarm1_base,innov_shk,paramplus,acoeff,poly,v
     invdf = pd.DataFrame(np.zeros([TT,nvars]),columns=varlist)
     invdf['mu_innov'] = 0.0
     invdf['beta_innov'] = 0.0
-    if irfswitch == 0:
-        rng = np.random.RandomState(1234)
-        innovall = rng.randn(ne,TT)
-        invdf['beta_innov'] = innovall[0,:]
-        if ne > 1:
-            invdf['mu_innov'] = innovall[1,:]
-    else:
-        invdf.loc[0,'beta_innov'] = innov_shk[0]
-        if ne > 1:
-            invdf.loc[1,'mu_innov'] = innov_shk[1]
-    innov = np.zeros(poly['ne']) 
-    endogvarm1_s = endogvarm1_shk
-    endogvarm1_b = endogvarm1_base
-    for tt in np.arange(TT):
-        innov[0] = invdf.loc[tt,'beta_innov']
-        if ne > 1:
-            innov[1] = invdf.loc[tt,'mu_innov']
-        endogvar = decr(endogvarm1_s,innov,paramplus,acoeff,poly)
-        innov[0] = 0.0
-        if ne > 1:
-            innov[1] = 0.0
-        endogvar_b = decr(endogvarm1_b,innov,paramplus,acoeff,poly)
-        for x in varlist:
-            if irfswitch == 0:
-                invdf.loc[tt,x] = 100.0*(endogvar[x+'_d']-endogvar_b[x+'_d'])
+    if poly['shockswitch'] == 0:
+        if irfswitch == 0:
+            rng = np.random.RandomState(1234)
+            innovall = rng.randn(ne,TT)
+            invdf['beta_innov'] = innovall[0,:]
+            if ne > 1:
+                invdf['mu_innov'] = innovall[1,:]
             else:
-                invdf.loc[tt,x] = 100.0*endogvar[x+'_d']
-        endogvarm1_s = endogvar
-        endogvarm1_b = endogvar_b
+                invdf.loc[0,'beta_innov'] = innov_shk[0]
+                if ne > 1:
+                    invdf.loc[1,'mu_innov'] = innov_shk[1]
+        innov = np.zeros(poly['ne']) 
+        endogvarm1_s = endogvarm1_shk
+        endogvarm1_b = endogvarm1_base
+        for tt in np.arange(TT):
+            innov[0] = invdf.loc[tt,'beta_innov']
+            if ne > 1:
+                innov[1] = invdf.loc[tt,'mu_innov']
+            endogvar = decr(endogvarm1_s,innov,paramplus,acoeff,poly)
+            innov[0] = 0.0
+            if ne > 1:
+                innov[1] = 0.0
+            endogvar_b = decr(endogvarm1_b,innov,paramplus,acoeff,poly)
+            for x in varlist:
+                if irfswitch == 0:
+                    invdf.loc[tt,x] = 100.0*(endogvar[x+'_d']-endogvar_b[x+'_d'])
+                else:
+                    invdf.loc[tt,x] = 100.0*endogvar[x+'_d']
+            endogvarm1_s = endogvar
+            endogvarm1_b = endogvar_b
+    else:
+        if irfswitch == 0:
+            rng = np.random.RandomState(1234)
+            innovall = rng.randn(ne,TT)
+            invdf['mu_innov'] = innovall[0,:]
+            if ne > 1:
+                invdf['beta_innov'] = innovall[1,:]
+            else:
+                invdf.loc[0,'mu_innov'] = innov_shk[0]
+                if ne > 1:
+                    invdf.loc[1,'beta_innov'] = innov_shk[1]
+        innov = np.zeros(poly['ne']) 
+        endogvarm1_s = endogvarm1_shk
+        endogvarm1_b = endogvarm1_base
+        for tt in np.arange(TT):
+            innov[0] = invdf.loc[tt,'mu_innov']
+            if ne > 1:
+                innov[1] = invdf.loc[tt,'beta_innov']
+            endogvar = decr(endogvarm1_s,innov,paramplus,acoeff,poly)
+            innov[0] = 0.0
+            if ne > 1:
+                innov[1] = 0.0
+            endogvar_b = decr(endogvarm1_b,innov,paramplus,acoeff,poly)
+            for x in varlist:
+                if irfswitch == 0:
+                    invdf.loc[tt,x] = 100.0*(endogvar[x+'_d']-endogvar_b[x+'_d'])
+                else:
+                    invdf.loc[tt,x] = 100.0*endogvar[x+'_d']
+            endogvarm1_s = endogvar
+            endogvarm1_b = endogvar_b
     return(invdf)
 
 

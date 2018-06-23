@@ -7,7 +7,7 @@ import sys
 importlib.reload(pa)
 
 #Read in nonlinear model and parameter values
-params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 4.6,'b' : 0.05,'gamma_A' : 0.00,'gamma_V': 0.00,'rhomu': 0.7,'stdmu' : 0.0025,\
+params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 4.6,'b' : 0.05,'gamma_A' : 0.00,'gamma_V': 0.00,'rhomu': 0.7,'stdmu' : 0.006,
              'rhobeta' : 0.5, 'stdbeta': 0.0035}
 phiitilde = params['b']*params['a']**2
 #params['a'] = -20.0
@@ -34,15 +34,28 @@ for i,x in enumerate(params):
     p0[i] = params[x]
 
 #get linear decision rule
-#innov = ['eps_beta','eps_mu']
-innov = ['eps_beta']
-ninnov = len(innov)
-if ninnov == 1:
-    msv = ['kp','inv','betashk']
+#innov_n = ['eps_beta','eps_mu']
+innov_n = ['eps_mu']
+#innov_n = ['eps_beta']
+if innov_n[0] == 'eps_beta':
+    shockswitch = 0
 else:
-    msv = ['kp','inv','betashk','mushk']  
+    shockswitch = 1
+    
+ninnov = len(innov_n)
+if shockswitch == 0:
+    if ninnov == 1:
+        msv = ['kp','inv','betashk']
+    else:
+        msv = ['kp','inv','betashk','mushk']
+else:
+    if ninnov == 1:
+        msv = ['kp','inv','mushk']
+    else:
+        msv = ['kp','inv','mushk','betashk']
+        
 nmsv = len(msv)
-pdv = ['dinv','qq']
+pdv = ['inv','qq']
 npdv = len(pdv)
 (tt,rr,cc) = partiallin.solve_LRE(p0)
 Aa = np.zeros([npdv,nmsv])
@@ -51,9 +64,12 @@ for i in np.arange(npdv):
     for j in np.arange(nmsv):
         Aa[i,j] = tt[partiallin.state_names.index(pdv[i]),partiallin.state_names.index(msv[j])]
     for k in np.arange(ninnov):   
-        Bb[i,k] = rr[partiallin.state_names.index(pdv[i]),partiallin.shock_names.index(innov[k])]
+        Bb[i,k] = rr[partiallin.state_names.index(pdv[i]),partiallin.shock_names.index(innov_n[k])]
 lcoeff = Aa.copy()
-lcoeff[:,-1] = Aa[:,-1]/paramplus['rhobeta']
+if shockswitch == 0:
+    lcoeff[:,-1] = Aa[:,-1]/paramplus['rhobeta']
+else:
+    lcoeff[:,-1] = Aa[:,-1]/paramplus['rhomu']
 
 #solve nonlinear model
 if nmsv == 3:
@@ -70,11 +86,11 @@ ngrid[0] = 7
 if ninnov > 1:
     ngrid[1] = 3
 eqswitch = 0
-poly0 = pa.initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
+poly0 = pa.initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch,shockswitch)
 poly0 = pa.get_griddetails(poly0,paramplus)
 acoeff0 = pa.get_initcoeffs(lcoeff,poly0)
 eqswitch = 1
-poly1 = pa.initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch)
+poly1 = pa.initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch,shockswitch)
 poly1 = pa.get_griddetails(poly1,paramplus)
 acoeff1,convergence = pa.get_coeffs(acoeff0,paramplus,poly1,step=0.5)
 if (convergence == False):
@@ -85,12 +101,17 @@ invcoeff_nl = pd.DataFrame(acoeff1[:,0:poly1['npoly']],columns=['cons','invm1','
 invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
 
 
+############################################################################################################################
+#Produce some output depending on a switch.
 #outputswitch = 0, do nothing
 #outputswitch = 1, get irfs and plot
 #outputswitch = 2, simulate data
-outputswitch = 1
+###########################################################################################################################3
+outputswitch = 0
 
 if outputswitch == 0:
+    print('Investment Decision rule Coeffs')
+    print(invcoeff_nl.round(3))
     print('Not generating IRFs or simulating data.')
 elif outputswitch == 1:
     irfswitch = 1
@@ -101,11 +122,10 @@ elif outputswitch == 1:
         endogvarm1[x] = paramplus[x]
         endogvarm1[x+'_d'] = 0.0
     endogvarm1['beta_d'] = 0.02
-    #endogvarm1['mu_d'] = 0.02
+    endogvarm1['mu_d'] = 0.02
     endogvarm1_b = endogvarm1.copy()
     innov = np.zeros([poly1['ne']])
     innov[0] = 2.0
-    #innov[1] = 2.0
     df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfswitch)
     df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfswitch)
 
