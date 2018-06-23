@@ -129,7 +129,7 @@ def modelvariables(polyapprox,xtilm1,shocks,paramplus,eqswitch,ne):
             
     kk = xtilm1[0]
     invm1 = xtilm1[1]
-    dvar['inv'] = polyapprox[0]+invm1
+    dvar['inv'] = polyapprox[0]
     dvar['qq'] = polyapprox[1]
     lvar['inv'] = np.exp(dvar['inv']+np.log(paramplus['inv']))  
     lvar['qq'] = np.exp(dvar['qq']+np.log(paramplus['qq']))
@@ -193,7 +193,7 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
             exp_ieq = exp_ieq + poly['quadweight'][j]*lvar['beta']*lvarp['qq']*lvarp['mu']*Sprimep*(lvarp['inv']/lvar['inv'])**2
     polynew = np.zeros(poly['nfunc'])
     if poly['eqswitch'] == 0:
-        polynew[0] = (1.0/(paramplus['a']**2*paramplus['b']))*(dvar['qq']+dvar['mu'])+exp_ieq
+        polynew[0] = invm1+(1.0/(paramplus['a']**2*paramplus['b']))*(dvar['qq']+dvar['mu'])+exp_ieq
         polynew[1] = -(1-paramplus['beta']*qweight)*(1.0-paramplus['alpha'])*dvar['kp'] + paramplus['beta']*exp_qeq + dvar['beta']
     else:
         linvm1 = np.exp(invm1+np.log(paramplus['inv']))
@@ -201,7 +201,7 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
         adjcost = paramplus['b']*(np.exp(paramplus['a']*(dinv_l-1))-paramplus['a']*(dinv_l-1)-1)
         stemp = (lvar['qq']*lvar['mu']*(1.0-adjcost)-1.0+exp_ieq)/(lvar['qq']*lvar['mu']*dinv_l)  
         sarg = 1.0+(1.0/paramplus['a'])*np.log(1.0+stemp/(paramplus['b']*paramplus['a']))
-        polynew[0] = np.log(sarg)
+        polynew[0] = invm1+np.log(sarg)
         rkp = (paramplus['alpha']/paramplus['gamma'])*(lvar['kp']/paramplus['gamma'])**(paramplus['alpha']-1)
         polynew[1] = np.log( lvar['beta']*(rkp+exp_qeq) )
         #polynew[1] = -(1-paramplus['beta']*qweight)*(1.0-paramplus['alpha'])*dvar['kp'] + paramplus['beta']*exp_qeq + dvar['beta']

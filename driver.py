@@ -80,13 +80,15 @@ acoeff1,convergence = pa.get_coeffs(acoeff0,paramplus,poly1,step=0.5)
 if (convergence == False):
     sys.exit('Failed to solve nonlinear model')
 
+#Create dataframe with metaparameters of decision rule for investment
+invcoeff_nl = pd.DataFrame(acoeff1[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
+invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
 
 
-#Get IRFs
-outputswitch = 0
-dinvcoeff_nl = pd.DataFrame(acoeff1[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
-dinvcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
-
+#outputswitch = 0, do nothing
+#outputswitch = 1, get irfs and plot
+#outputswitch = 2, simulate data
+outputswitch = 1
 
 if outputswitch == 0:
     print('Not generating IRFs or simulating data.')
@@ -104,8 +106,8 @@ elif outputswitch == 1:
     innov = np.zeros([poly1['ne']])
     innov[0] = 2.0
     #innov[1] = 2.0
-    df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfshock)
-    df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfshock)
+    df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfswitch)
+    df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfswitch)
 
     #run shocks in opposite direction
     endogvarm1['beta_d'] = -endogvarm1['beta_d']
@@ -113,7 +115,7 @@ elif outputswitch == 1:
     innov[0] = -innov[0]
     if poly0['ne'] > 1:
         innov[1] = -innov[1]
-    df3 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfshock)
+    df3 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfswitch)
     df3 = -df3
 
     #Plot IRFs of linear and nonlinear models
@@ -154,8 +156,8 @@ else:
         endogvarm1[x+'_d'] = 0.0
     endogvarm1_b = endogvarm1.copy()
     innov = np.zeros([poly1['ne']])
-    df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfshock)
-    df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfshock)
+    df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfswitch)
+    df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfswitch)
     df2stats = df2.describe()
 
 
