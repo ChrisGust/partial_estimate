@@ -199,7 +199,7 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
         linvm1 = np.exp(invm1+np.log(paramplus['inv']))
         dinv_l = lvar['inv']/linvm1
         adjcost = paramplus['b']*(np.exp(paramplus['a']*(dinv_l-1))-paramplus['a']*(dinv_l-1)-1)
-        stemp = (lvar['qq']*lvar['mu']*(1.0/lvar['mu']-adjcost)-1.0+exp_ieq)/(lvar['qq']*lvar['mu']*dinv_l)  
+        stemp = (lvar['qq']*lvar['mu']*(1.0-adjcost)-1.0+exp_ieq)/(lvar['qq']*lvar['mu']*dinv_l)  
         sarg = 1.0+(1.0/paramplus['a'])*np.log(1.0+stemp/(paramplus['b']*paramplus['a']))
         polynew[0] = np.log(sarg)
         rkp = (paramplus['alpha']/paramplus['gamma'])*(lvar['kp']/paramplus['gamma'])**(paramplus['alpha']-1)

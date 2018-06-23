@@ -7,7 +7,7 @@ import sys
 importlib.reload(pa)
 
 #Read in nonlinear model and parameter values
-params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 4.6,'b' : 0.05,'gamma_A' : 0.00,'gamma_V': 0.00,'rhomu': 0.7,'stdmu' : 0.01,\
+params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 4.6,'b' : 0.05,'gamma_A' : 0.00,'gamma_V': 0.00,'rhomu': 0.7,'stdmu' : 0.0025,\
              'rhobeta' : 0.5, 'stdbeta': 0.003}
 phiitilde = params['b']*params['a']**2
 #params['a'] = -20.0
@@ -15,14 +15,14 @@ phiitilde = params['b']*params['a']**2
 paramplus = pa.get_steady(params)
 
 #plot linex adjustment costs
-inv = np.arange(0.8,1.2,0.0025)
-adj = inv*paramplus['b']*(np.exp(paramplus['a']*(inv-1.0))-paramplus['a']*(inv-1.0)-1)
-fig1, axs1 = plt.subplots(1,1)
-axs1.plot(inv,adj,'k-',linewidth=3)
-axs1.set_title('Linex Adjustment Cost Function')
-axs1.set_xlabel('$x_t$')
-axs1.set_ylabel('$S(x_t)x_t$')
-plt.show()
+# inv = np.arange(0.8,1.2,0.0025)
+# adj = inv*paramplus['b']*(np.exp(paramplus['a']*(inv-1.0))-paramplus['a']*(inv-1.0)-1)
+# fig1, axs1 = plt.subplots(1,1)
+# axs1.plot(inv,adj,'k-',linewidth=3)
+# axs1.set_title('Linex Adjustment Cost Function')
+# axs1.set_xlabel('$x_t$')
+# axs1.set_ylabel('$S(x_t)x_t$')
+# plt.show()
 #sys.exit('stop after plot')
 
 #Solve linear model
@@ -34,8 +34,8 @@ for i,x in enumerate(params):
     p0[i] = params[x]
 
 #get linear decision rule
-innov = ['eps_beta','eps_mu']
-#innov = ['eps_beta']
+#innov = ['eps_beta','eps_mu']
+innov = ['eps_beta']
 ninnov = len(innov)
 if ninnov == 1:
     msv = ['kp','inv','betashk']
@@ -65,7 +65,7 @@ else:
 ngrid = np.ones(ninnov,dtype=int)
 msvmax[0] = 0.1
 msvmax[1] = 0.2
-maxstd = 2.5
+maxstd = 2.0
 ngrid[0] = 7
 if ninnov > 1:
     ngrid[1] = 3
@@ -89,22 +89,21 @@ if irfshock == 1:
     for x in varlist:
         endogvarm1[x] = paramplus[x]
         endogvarm1[x+'_d'] = 0.0
-    #endogvarm1['beta_d'] = 0.012
-    #endogvarm1['mu_d'] = 0.012
-    endogvarm1['inv_d'] = 0.0
+    endogvarm1['beta_d'] = 0.02
+    #endogvarm1['mu_d'] = 0.02
     endogvarm1_b = endogvarm1.copy()
     innov = np.zeros([poly1['ne']])
-    #innov[0] = 2.0
-    innov[1] = 2.0
+    innov[0] = 2.0
+    #innov[1] = 2.0
     df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfshock)
     df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfshock)
+
+    #run shocks in opposite direction
     endogvarm1['beta_d'] = -endogvarm1['beta_d']
-    endogvarm1_b['beta_d'] = endogvarm1['beta_d']
-    endogvarm1['inv_d'] = -endogvarm1['inv_d']
-    endogvarm1_b['inv_d'] = endogvarm1['inv_d']
-    #absolute value of negative shock
+    endogvarm1['mu_d'] = -endogvarm1['mu_d']
     innov[0] = -innov[0]
-    innov[1] = -innov[1]
+    if poly0['ne'] > 1:
+        innov[1] = -innov[1]
     df3 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfshock)
     df3 = -df3
 
@@ -129,11 +128,11 @@ if irfshock == 1:
         if i <= 1:
             df3[varplot[i]].plot(ax=axs3[i,0],style='r:',linewidth=3)
             df2[varplot[i]].plot(ax=axs3[i,0],style='b-',linewidth=3)
-            axs2[i,0].set_title(varplot[i])
+            axs3[i,0].set_title(varplot[i])
         else:
             df3[varplot[i]].plot(ax=axs3[i-2,1],style='r:',linewidth=3,label='Negative')
             df2[varplot[i]].plot(ax=axs3[i-2,1],style='b-',linewidth=3,label='Positive')
-            axs2[i-2,1].set_title(varplot[i])   
+            axs3[i-2,1].set_title(varplot[i])   
     axs3[1,1].legend()
     plt.show()
 else:
