@@ -7,8 +7,8 @@ import sys
 importlib.reload(pa)
 
 #Read in nonlinear model and parameter values
-params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 4.6,'b' : 0.05,'gamma_A' : 0.00,'gamma_V': 0.00,'rhomu': 0.7,'stdmu' : 0.0075,
-             'rhobeta' : 0.5, 'stdbeta': 0.0035}
+params = {'beta' : 0.99,'delta':0.025,'alpha': 0.3,'a': 8,'b' : 0.01,'gamma_A' : 0.00,'gamma_V': 0.00,'rhomu': 0.7,'stdmu' : 0.005,
+             'rhobeta': 0.5, 'stdbeta': 0.0035}
 phiitilde = params['b']*params['a']**2
 #params['a'] = -20.0
 #params['b'] = phiitilde/(params['a']**2)
@@ -23,7 +23,7 @@ paramplus = pa.get_steady(params)
 # axs1.set_xlabel('$x_t$')
 # axs1.set_ylabel('$S(x_t)x_t$')
 # plt.show()
-#sys.exit('stop after plot')
+# sys.exit('stop after plot')
 
 #Solve linear model
 import dsge
@@ -80,7 +80,7 @@ else:
     msvmax = np.zeros(nmsv-2)
 ngrid = np.ones(ninnov,dtype=int)
 msvmax[0] = 0.05
-msvmax[1] = 0.15
+msvmax[1] = 0.1
 maxstd = 2.0
 ngrid[0] = 7
 if ninnov > 1:
@@ -108,7 +108,7 @@ invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1',
 #outputswitch = 2, simulate data
 #outputswitch = 3, plot decision rule for investment
 ###########################################################################################################################3
-outputswitch = 2
+outputswitch = 3
 if outputswitch == 0:
     print('Investment Decision rule Coeffs')
     print(invcoeff_nl.round(3))
@@ -169,7 +169,7 @@ elif outputswitch == 1:
     axs3[1,1].legend()
     plt.show()
 elif outputswitch == 2:
-    irfswitch = 0
+    irfswitch = 0xf
     TT = 5000
     varlist = ['kp','inv','qq','mu','beta','dinv','invrate']
     endogvarm1 = {x: 0.0 for x in varlist}
@@ -188,25 +188,31 @@ else:
         endogvarm1[x] = paramplus[x]
         endogvarm1[x+'_d'] = 0.0
     innov = np.zeros([poly1['ne']])
-    
-    
+    endogvar = pa.decr(endogvarm1,innov,paramplus,acoeff1,poly1)
+
+    plotswitch = 1  #if plot switch = 0, plot as a function of Km1; otherwise invm1
     Nx = 50
     Ns = 3
-    mu_lb = -0.5*msvmax[0]
+    if plotswitch == 0:
+        mu_lb = -0.5*msvmax[0]
+    else:
+        mu_lb = -msvmax[1]
     xx = np.linspace(mu_lb,-mu_lb,Nx)
     inv_nl = np.zeros([Ns,Nx])
     inv_lin = np.zeros([Ns,Nx])
 
     shockval = np.zeros(Ns)
     shockval[0] = (poly1['exoggrid'][0,0]+0.001)/paramplus['rhomu']
-    #shockval[0] = -0.5*msvmax[1]
     shockval[Ns-1] = -shockval[0]
 
     for j in np.arange(Ns):
         for i in np.arange(Nx):
             endogvarm1['mu_d'] = shockval[j]
-            #endogvarm1['inv_d'] = shockval[j]
-            endogvarm1['kp_d'] = xx[i]
+            if plotswitch == 0:
+                endogvarm1['kp_d'] = xx[i]
+            else:
+                endogvarm1['inv_d'] = xx[i]
+                endogvarm1['kp_d'] = 0.025
             endogvar = pa.decr(endogvarm1,innov,paramplus,acoeff1,poly1)
             endogvar_lin = pa.decr(endogvarm1,innov,paramplus,acoeff0,poly0)
             inv_nl[j,i] = 100.0*endogvar['inv_d']
@@ -217,11 +223,15 @@ else:
     axs2.plot(100*xx,inv_lin[1,:],'k-',linewidth=3)
     axs2.plot(100*xx,inv_nl[1,:],'r:',linewidth=3,label='Nonlinear, ss mu')
     axs2.plot(100*xx,inv_lin[0,:],'k-',linewidth=3)
-    axs2.plot(100*xx,inv_nl[0,:],'r:',linewidth=3,label='Nonlinear, low mu')
+    axs2.plot(100*xx,inv_nl[0,:],'g:',linewidth=3,label='Nonlinear, low mu')
     axs2.plot(100*xx,inv_lin[2,:],'k-',linewidth=3)
-    axs2.plot(100*xx,inv_nl[2,:],'r:',linewidth=3,label='Nonlinear, high mu')
-    axs2.set_title('Investment as a function of Lagged K')
-    axs2.set_xlabel('Kp(-1)')
+    axs2.plot(100*xx,inv_nl[2,:],'y:',linewidth=3,label='Nonlinear, high mu')
+    if plotswitch == 0:
+        axs2.set_title('Investment as a function of Lagged K')
+        axs2.set_xlabel('Kp(-1)')
+    else:
+         axs2.set_title('Investment as a function of Lagged I')
+         axs2.set_xlabel('Inv(-1)')
     axs2.set_ylabel('Investment')
     axs2.legend()
     plt.show()
