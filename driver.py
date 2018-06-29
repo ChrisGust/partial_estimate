@@ -185,7 +185,6 @@ elif outputswitch == 2:
     qar_results = results = estimate_qar(100*df2['dinv'])
     qar_results.summary()
 
-    
 else:
     varlist = ['kp','inv','qq','mu','beta','dinv','invrate']
     endogvarm1 = {x: 0.0 for x in varlist} 
