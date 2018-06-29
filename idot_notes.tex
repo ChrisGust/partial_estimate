@@ -32,51 +32,88 @@ I_t = V_t X_t, \label{inv_production}
 \end{equation}
 where $V_t$ represents investment-specific technological change. $I_t$ augments a firm's capital according to:
 \begin{equation} 
-K_{t+1} = (1-\delta) K_t +\left[1-  S\left(\frac{I_t}{I_{t-1}}\right) \right] \mu_t I_t,  \label{capital_accumulation}
+K_{t+1} = (1-\delta) K_t +\left[1-  S\left(\frac{I_t}{\gamma I_{t-1}}\right) \right] \mu_t I_t,  \label{capital_accumulation}
 \end{equation}
-where $\delta$ is the depreciation rate of existing capital and $\mu_t$ is a shock to the marginal efficiency of investment.  The investment adjustment cost, $S\left(\frac{I_t}{I_{t-1}}\right)$, is specified by the linex function:
+where $\delta$ is the depreciation rate of existing capital, $\mu_t$ is a shock to the marginal efficiency of investment, and $\gamma$ is the growth rate of investment.  The investment adjustment cost, $S\left(\frac{I_t}{\gamma I_{t-1}}\right)$, is specified by the linex function:
 \begin{equation}
-S\left(\frac{I_t}{I_{t-1}}\right) =  b \left\{\exp\left[ a \left(\frac{I_t}{I_{t-1}}-1\right)\right]-a\left(\frac{I_t}{I_{t-1}}-1\right)-1\right\}.
+S\left(\frac{I_t}{ \gamma I_{t-1}}\right) =  b \left\{\exp \left[ a \left(\frac{I_t}{\gamma I_{t-1}}-1\right)\right]-a\left(\frac{I_t}{ \gamma I_{t-1}}-1\right)-1\right\}.
 \end{equation}
 
 A firm also hires its labor input, $H_t$, in a competitive market.  It maximizes the discounted stream of profits by choosing contingency plans for $K_{t+1}$, $X_t$, and $H_t$:
 \begin{equation}
-\max E_0 \sum^{\infty}_{t=0} m_t  \left[Y_t - w_t H_t - X_t  \right].
+\max E_0 \sum^{\infty}_{t=0} M_t  \left[Y_t - W_t H_t - X_t  \right].
 \end{equation}
-where $m_t$ is the firm's stochastic discount factor which it takes as given along with the real wage $w_t$. It maximizes this objective subject to equations (\ref{production_function})-(\ref{capital_accumulation}).  In an equilibrium in which labor is in supplied inelastically to firms and the supply of labor is normalized to one, the first order conditions associated with this problem are:
+where $M_t$ is the firm's stochastic discount factor which it takes as given along with the real wage $W_t$. It maximizes this objective subject to equations (\ref{production_function})-(\ref{capital_accumulation}).  In an equilibrium in which labor is in supplied inelastically to firms and the supply of labor is normalized to one, the first order conditions associated with this problem are:
 \begin{equation}
-w_t = (1-\alpha) Y_t
-\end{equation}
-\begin{equation}
-q_t = E_t \left\{ m_{t+1} \left[ \alpha K^{\alpha-1}_{t+1} + (1-\delta) q_{t+1} \right]  \right\} \label{K_demand}
+W_t = (1-\alpha) Y_t
 \end{equation}
 \begin{equation}
-q_t \mu_t \left[ 1 - \frac{\phi_I}{2}\left(\frac{I_t}{I_{t-1}}-1\right)^2 - \phi_I \left(\frac{I_t}{I_{t-1}}-1\right) \frac{I_t}{I_{t-1}} \right]
-+ E_t \left[ m_{t+1} q_{t+1} \mu_{t+1} \phi_I \left(\frac{I_{t+1}}{I_{t}}-1\right) \frac{I^2_{t+1}}{I^2_{t}} \right] =1,  \label{K_supply}
+Q_t = \frac{\beta_t}{\gamma_{\tilde{A}}}E_t  \left[ \alpha A_{t+1} K^{\alpha-1}_{t+1} + (1-\delta) Q_{t+1} \right]  \label{K_demand}
 \end{equation}
-where $m_{t+1} = \beta \frac{\Lambda_{t+1}}{\Lambda_t}$.  Equation (\ref{K_demand}) can be thought of as tracing out a firm's demand for capital as it implies that a firm's demand for capital, $K_{t+1}$, is inversely related to its price, $q_t$, holding all else equal.  Equation (\ref{K_supply}) can be viewed as determining the supply of capital, as this equation and the capital accumulation equation implicitly define a positive relationship between $q_t$ and $K_{t+1}$.  These relationships are easiest to see after taking a first-order approximation to the model, a task we turn to next.
+\begin{equation}
+Q_t \mu_t \left[ 1 - S\left(\frac{I_t}{\gamma I_{t-1}}\right)-S^{\prime}\left(\frac{I_t}{\gamma I_{t-1}}\right) \frac{I_t}{\gamma I_{t-1}} \right]
++ \frac{\beta_t}{\gamma_{\tilde{A}}}E_t \left[ Q_{t+1} \mu_{t+1} S^{\prime}\left(\frac{I_{t+1}}{\gamma I_{t}}\right)  \frac{I^2_{t+1}}{\gamma I^2_{t}} \right] = \frac{1}{V_t},  \label{K_supply}
+\end{equation}
+where $\frac{\beta_t}{\gamma_{\tilde{A}}} \equiv \frac{M_{t+1}}{M_t}$ and $\gamma_{\tilde{A}}$ is the deterministic growth rate of output defined below.
+Equation (\ref{K_demand}) can be thought of as tracing out a firm's demand for capital as it implies that a firm's demand for capital, $K_{t+1}$, is inversely related to its price, $q_t$, holding all else equal.  Equation (\ref{K_supply}) can be viewed as determining the supply of capital, as this equation and the capital accumulation equation implicitly define a positive relationship between $Q_t$ and $K_{t+1}$.  We assume that both investment specific and general purpose technology are deterministic:
+\begin{equation}
+\frac{A_{t}}{A_{t-1}} = \gamma_A  \text{  and  }  \frac{V_{t}}{V_{t-1}}  = \gamma_V.
+\end{equation}
+In order to scale the economy so that it satisfies balanced growth, we define:
+\begin{equation}
+\tilde{A}_t = \left[ A_t V^{\alpha}_t \right]^{\frac{1}{1-\alpha}}
+\end{equation}
+and $y_t = \frac{Y_t}{\tilde{A}_t}$, $w_t = \frac{W_t}{\tilde{A}_t}$, and $x_t = \frac{x_t}{\tilde{A}_t}$.  Also, $i_t = \frac{I_t}{\tilde{A}_t V_t}$, $k_{t+1} = \frac{K_{t+1}}{\tilde{A}_t V_t}$, and $q_t = V_t Q_t$.  The scaled equilibrium conditions are:
+\begin{equation}
+q_t =  \beta_t E_t  \left[ \alpha \frac{y_{t+1}}{k_{t+1}} + \frac{(1-\delta)}{\gamma} q_{t+1} \right] \label{Kdemand_s}
+\end{equation}
+\begin{equation}
+y_t = \left(\frac{k_t}{\gamma}\right)^{\alpha}
+\end{equation}
+where $\gamma = \gamma_{\tilde{A}} \gamma_V$ and $\gamma_{\tilde{A}} = \left[ \gamma_A \gamma_V^{\alpha} \right]^{\frac{1}{1-\alpha}}$.  
+\begin{equation}
+k_{t+1} = (1-\delta) \frac{k_t}{\gamma} + \left[ 1-  S\left(\frac{i_t}{i_{t-1}}\right) \right] \mu_t i_t
+\end{equation}
+\begin{equation}
+q_t \mu_t \left[ 1 - S\left(\frac{i_t}{i_{t-1}}\right)-S^{\prime}\left(\frac{i_t}{i_{t-1}}\right) \frac{i_t}{i_{t-1}} \right]
++ \beta_t E_t \left[ q_{t+1} \mu_{t+1} S^{\prime}\left(\frac{i_{t+1}}{i_{t}}\right)  \frac{ i^2_{t+1}}{i^2_{t}} \right] = 1 \label{Ksupply_s}
+\end{equation}
+Equations (\ref{Kdemand_s})-(\ref{Ksupply_s}) are the scaled nonlinear equilibrium conditions of the model.  In the above, $S^{\prime}\left(\frac{i_t}{i_{t-1}}\right)$ is given by:
+\begin{equation}
+S^{\prime}\left(\frac{i_t}{i_{t-1}}\right) = ba \left\{ \exp \left[ a \left(\frac{i_t}{i_{t-1}}-1\right)\right]-1 \right\}
+\end{equation}
 
 \section{Approximating the Model's Dynamics}
 
-We first begin by taking a first-approximation to the model to show how equation (\ref{K_demand}) can be viewed as the capital demand equation and equation (\ref{K_demand}) as the capital supply equation.  A first-order approximation of equations (\ref{K_demand}), (\ref{capital_accumulation}), and (\ref{K_supply}) yields:
+Here we discuss the model's nonstochastic steady state, the linear approximation to the equilibrium conditions, and the nonlinear solution to the model.  
+
+\subsection{Nonstochastic Steady State}
+
+In the nonstochastic steady state, $S = S^{\prime} = 0$.  Also, $\mu_t = 1$ and $\beta_t = \beta$ for all $t$.  So, we have that $q = 1$.  From the capital accumulation equation, we have:
+\begin{equation}
+i = \left[ 1-\frac{1-\delta}{\gamma} \right] k
+\end{equation}
+From the capital demand equation, we have:
+\begin{equation}
+\frac{k}{y} = \frac{\alpha \beta \gamma}{\gamma-\beta (1-\delta)}
+\end{equation}
+The steady state level of capital is given by:
+\begin{equation}
+k = \gamma \left[ \frac{\alpha}{\gamma-\beta (1-\delta)} \right]^{\frac{1}{1-\alpha}}
+\end{equation}
+
+\subsection{Linear Approximation}
+
+A first-order approximation of equations (\ref{Kdemand_s})-(\ref{Ksupply_s}) yields:
 \begin{gather}
-\hat{q}_t = -\hat{r}_{t} - (1-\alpha)(1-\frac{1-\delta}{r}) \hat{K}_{t+1} + \frac{1-\delta}{r} E_t \hat{q}_{t+1}  \label{Klin_demand} \\
-\hat{K}_{t+1} = (1-\delta) \hat{K}_t + \delta \left( \hat{I}_t + \hat{\mu}_t \right) \label{Klin_accumulation}  \\
-\hat{q}_t + \hat{\mu}_t = \phi_I \left( \hat{I}_t - \hat{I}_{t-1} \right) - \frac{\phi_I}{r}  E_t \left( \hat{I}_{t+1} - \hat{I}_{t} \right)  \label{Klin_supply}
+\hat{q}_t = - (1-\alpha)(1-\beta \frac{1-\delta}{\gamma}) \hat{k}_{t+1} + \frac{\beta (1-\delta)}{\gamma} E_t \hat{q}_{t+1} + \hat{\beta}_{t}\label{Klin_demand} \\
+\hat{k}_{t+1} = \frac{1-\delta}{\gamma} \hat{k}_t + \left[ 1-\frac{1-\delta}{\gamma} \right]  \left( \hat{i}_t + \hat{\mu}_t \right) \label{Klin_accumulation}  \\
+\hat{q}_t + \hat{\mu}_t = \phi_I \left( \hat{i}_t - \hat{i}_{t-1} \right) - \beta \phi_I  E_t \left( \hat{i}_{t+1} - \hat{i}_{t} \right)  \label{Klin_supply}
 \end{gather}
-where $r^{-1}_t = E_t m_{t+1}$.
-A second order approximation of the capital demand equation yields:
-\begin{gather}
-\hat{q}_t + 0.5 \hat{q}^2_t  = -\hat{r}_{t} + 0.5 \hat{r}^2_{t} - (1-\alpha)(1-\frac{1-\delta}{r}) \left[ \hat{K}_{t+1} - (1-\alpha) \left(0.5 \hat{K}^2_{t+1} + \hat{r}_t \hat{K}_{t+1} \right) \right] + \\
-\frac{1-\delta}{r} E_t \left[ \hat{q}_{t+1} +0.5 \hat{q}^2_{t+1} - \hat{r}_t \hat{q}_{t+1}\right] \notag 
-\end{gather}
-The capital supply block is given by:
-\begin{gather}
-\hat{K}_{t+1} + 0.5 \hat{K}^2_{t+1} = (1-\delta) \left[\hat{K}_t + 0.5 \hat{K}^2_{t} \right] + \delta \left[ \left( \hat{I}_t + \hat{\mu}_t \right) + 0.5 \left(\hat{I}_t +\hat{\mu}_t \right)^2 - 0.5 \phi_I \left( \hat{I}_t - \hat{I}_{t-1} \right)^2 \right]  \\
-\hat{q}_t + \hat{\mu}_t + 0.5 \left(\hat{q}_t + \hat{\mu}_t \right)^2 = \phi_I \left[ \hat{I}_t - \hat{I}_{t-1} + \left(\hat{q}_t + \hat{\mu}_t \right) \left(  \hat{I}_t - \hat{I}_{t-1}\right) \right] + 2 \phi_I \left(  \hat{I}_t - \hat{I}_{t-1}\right)^2 - \\  
-\frac{\phi_I}{r} E_t \left(1+ \hat{q}_{t+1} + \hat{\mu}_{t+1} - \hat{r}_t \right) \left( \hat{I}_{t+1} - \hat{I}_{t} \right) - \frac{5}{2} \frac{\phi_I}{r}  E_t \left( \hat{I}_{t+1} - \hat{I}_{t} \right)^2, \notag
-\end{gather}
-where we use certainty equivalence to replace the expectation operator where relevant in the above equations.
+
+
+
+
 
 
 

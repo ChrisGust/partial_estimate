@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import partial_adj1 as pa
+from qar import estimate_qar
 import pandas as pd
 import importlib
 import sys  
@@ -108,7 +109,7 @@ invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1',
 #outputswitch = 2, simulate data
 #outputswitch = 3, plot decision rule for investment
 ###########################################################################################################################3
-outputswitch = 3
+outputswitch = 2
 if outputswitch == 0:
     print('Investment Decision rule Coeffs')
     print(invcoeff_nl.round(3))
@@ -180,7 +181,11 @@ elif outputswitch == 2:
     innov = np.zeros([poly1['ne']])
     df1 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff0,poly0,varlist,irfswitch)
     df2 = pa.simulate(TT,endogvarm1,endogvarm1_b,innov,paramplus,acoeff1,poly1,varlist,irfswitch)
-    df2stats = df2.describe()   
+    df2stats = df2.describe()
+    qar_results = results = estimate_qar(100*df2['dinv'])
+    qar_results.summary()
+
+    
 else:
     varlist = ['kp','inv','qq','mu','beta','dinv','invrate']
     endogvarm1 = {x: 0.0 for x in varlist} 
@@ -190,29 +195,43 @@ else:
     innov = np.zeros([poly1['ne']])
     endogvar = pa.decr(endogvarm1,innov,paramplus,acoeff1,poly1)
 
-    plotswitch = 1  #if plot switch = 0, plot as a function of Km1; otherwise invm1
+    #if plotswitch = 0, plot as a function of Km1 for three different levels of the shock
+    #if plotswitch = 1, plot as a function of invm1 for three different levels of the shock
+    #otherwise, plot as a function of the shock for three different levels of capital
+    plotswitch = 1
     Nx = 50
     Ns = 3
     if plotswitch == 0:
         mu_lb = -0.5*msvmax[0]
-    else:
+    elif plotswitch == 1:
         mu_lb = -msvmax[1]
+    else:
+        mu_lb =  (poly1['exoggrid'][0,0]+0.001)/paramplus['rhomu']
+        
     xx = np.linspace(mu_lb,-mu_lb,Nx)
     inv_nl = np.zeros([Ns,Nx])
     inv_lin = np.zeros([Ns,Nx])
 
     shockval = np.zeros(Ns)
-    shockval[0] = (poly1['exoggrid'][0,0]+0.001)/paramplus['rhomu']
-    shockval[Ns-1] = -shockval[0]
+    if plotswitch <= 1:
+        shockval[0] = (poly1['exoggrid'][0,0]+0.001)/paramplus['rhomu']
+        shockval[Ns-1] = -shockval[0]
+    else:
+        shockval[0] = -0.5*msvmax[0]
+        shockval[Ns-1] = 0.5*msvmax[0]
 
     for j in np.arange(Ns):
         for i in np.arange(Nx):
-            endogvarm1['mu_d'] = shockval[j]
+            
             if plotswitch == 0:
                 endogvarm1['kp_d'] = xx[i]
-            else:
+                endogvarm1['mu_d'] = shockval[j]
+            elif plotswitch == 1:
                 endogvarm1['inv_d'] = xx[i]
-                endogvarm1['kp_d'] = 0.025
+                endogvarm1['mu_d'] = shockval[j]
+            else:
+                endogvarm1['mu_d'] = xx[i]
+                endogvarm1['kp_d'] = shockval[j]
             endogvar = pa.decr(endogvarm1,innov,paramplus,acoeff1,poly1)
             endogvar_lin = pa.decr(endogvarm1,innov,paramplus,acoeff0,poly0)
             inv_nl[j,i] = 100.0*endogvar['inv_d']
@@ -221,17 +240,29 @@ else:
     #plot investment decision rule 
     fig2, axs2 = plt.subplots(1,1)
     axs2.plot(100*xx,inv_lin[1,:],'k-',linewidth=3)
-    axs2.plot(100*xx,inv_nl[1,:],'r:',linewidth=3,label='Nonlinear, ss mu')
+    if plotswitch <= 0:
+        axs2.plot(100*xx,inv_nl[1,:],'r:',linewidth=3,label='Nonlinear, ss mu')
+    else:
+        axs2.plot(100*xx,inv_nl[1,:],'r:',linewidth=3,label='Nonlinear, ss km1')
     axs2.plot(100*xx,inv_lin[0,:],'k-',linewidth=3)
-    axs2.plot(100*xx,inv_nl[0,:],'g:',linewidth=3,label='Nonlinear, low mu')
+    if plotswitch <= 0:
+        axs2.plot(100*xx,inv_nl[0,:],'r:',linewidth=3,label='Nonlinear, low mu')
+    else:
+        axs2.plot(100*xx,inv_nl[0,:],'r:',linewidth=3,label='Nonlinear, low km1')
     axs2.plot(100*xx,inv_lin[2,:],'k-',linewidth=3)
-    axs2.plot(100*xx,inv_nl[2,:],'y:',linewidth=3,label='Nonlinear, high mu')
+    if plotswitch <= 0:
+        axs2.plot(100*xx,inv_nl[2,:],'r:',linewidth=3,label='Nonlinear, high mu')
+    else:
+        axs2.plot(100*xx,inv_nl[2,:],'r:',linewidth=3,label='Nonlinear, high km1')
     if plotswitch == 0:
         axs2.set_title('Investment as a function of Lagged K')
         axs2.set_xlabel('Kp(-1)')
-    else:
+    elif plotswitch == 1:
          axs2.set_title('Investment as a function of Lagged I')
          axs2.set_xlabel('Inv(-1)')
+    else:
+        axs2.set_title('Investment as a function of mu')
+        axs2.set_xlabel('mu')
     axs2.set_ylabel('Investment')
     axs2.legend()
     plt.show()
