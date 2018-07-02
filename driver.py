@@ -72,20 +72,39 @@ if shockswitch == 0:
 else:
     lcoeff[:,-1] = Aa[:,-1]/paramplus['rhomu']
 
+###########################################################################################################
 #solve nonlinear model
-if nmsv == 3:
-    ncheb = 3*np.ones(nmsv-1,dtype=int)
-    msvmax = np.zeros(nmsv-1)
+###########################################################################################################
+interpolateswitch = False
+
+if interpolateswitch == True:
+    ngrid = np.ones(ninnov,dtype=int)
+    ngrid[0] = 7
+    if ninnov > 1:
+        ngrid[1] = 3
 else:
-    ncheb = 3*np.ones(nmsv-2,dtype=int)
-    msvmax = np.zeros(nmsv-2)
-ngrid = np.ones(ninnov,dtype=int)
-msvmax[0] = 0.05
-msvmax[1] = 0.1
-maxstd = 2.0
-ngrid[0] = 7
-if ninnov > 1:
-    ngrid[1] = 3
+    ngrid = 0
+
+if interpolateswitch == True:
+    if nmsv == 3:
+        ncheb = 3*np.ones(nmsv-1,dtype=int)
+        msvmax = np.zeros(nmsv-1)
+    else:
+        ncheb = 3*np.ones(nmsv-2,dtype=int)
+        msvmax = np.zeros(nmsv-2)
+    msvmax[0] = 0.05
+    msvmax[1] = 0.1
+    maxstd = 2.0
+else:
+    ncheb = 2*np.ones(nmsv,dtype=int)
+    msvmax = np.zeros(nmsv)
+    msvmax[0] = 0.05
+    msvmax[1] = 0.1
+    maxstd = 2.0
+    msvmax[2] = maxstd*np.sqrt( paramplus['stdmu']**2/(1.0-paramplus['rhomu']**2) )
+    if nmsv == 4:
+        msvmax[3] = maxstd*np.sqrt( paramplus['stdbeta']**2/(1.0-paramplus['rhobeta']**2) )
+
 eqswitch = 0
 poly0 = pa.initialize_poly(npdv,ncheb,ngrid,msvmax,maxstd,eqswitch,shockswitch)
 poly0 = pa.get_griddetails(poly0,paramplus)
@@ -98,9 +117,12 @@ if (convergence == False):
     sys.exit('Failed to solve nonlinear model')
 
 #Create dataframe with metaparameters of decision rule for investment
-invcoeff_nl = pd.DataFrame(acoeff1[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
-invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
-
+if interpolateswitch == True:
+    invcoeff_nl = pd.DataFrame(acoeff1[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
+    invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1','invm1^2','km1','invm1*km1','invm1^2*km1','km1^2','invm1*km1^2','invm1^2*km1^2'])
+else:
+    invcoeff_nl = pd.DataFrame(acoeff1[:,0:poly1['npoly']],columns=['cons','mu','invm1','mu*invm1','km1','mu*km1','km1*invm1','mu*invm1*km1'])
+    invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','mu','invm1','mu*invm1','km1','mu*km1','km1*invm1','mu*invm1*km1'])
 
 ############################################################################################################################
 #Produce some output depending on a switch.
@@ -109,7 +131,7 @@ invcoeff_lin = pd.DataFrame(acoeff0[:,0:poly1['npoly']],columns=['cons','invm1',
 #outputswitch = 2, simulate data
 #outputswitch = 3, plot decision rule for investment
 ###########################################################################################################################3
-outputswitch = 2
+outputswitch = 0
 if outputswitch == 0:
     print('Investment Decision rule Coeffs')
     print(invcoeff_nl.round(3))

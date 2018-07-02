@@ -11,22 +11,32 @@ def initialize_poly(nfunc,ncheb,ngrid,msvmax,shockmaxstd,eqswitch,shockswitch):
 #Returns some details of polynomial approximation (the ones that do not depend on model parameters).
 
     poly = {'nfunc': nfunc, 'maxstd': shockmaxstd, 'eqswitch' : eqswitch, 'shockswitch' : shockswitch}
-    poly['ne'] = len(ngrid)
+    if ngrid == 0:
+        poly['ne'] = 0
+    else:
+        poly['ne'] = len(ngrid)
     poly['nmsv'] = len(ncheb)
     if poly['ne'] > 2:
         print('number of shocks on linear interpolation part of the grid  must be less than 2. Stopping now.')
         sys.exit()
     poly['ncheb'] = ncheb
     poly['npoly'] = np.product(poly['ncheb'])
-    poly['ninnov'] = poly['ne']
-    poly['ngrid'] = ngrid
+    if ngrid == 0:
+        poly['ninnov'] = 1
+    else:
+        poly['ninnov'] = poly['ne']
+    if ngrid > 0:
+        poly['ngrid'] = ngrid
     poly['nquad'] = np.ones(poly['ninnov'],dtype=int)
-    poly['rhos'] = np.zeros(poly['ne'])
-    poly['stds'] = np.zeros(poly['ne'])
+    poly['rhos'] = np.zeros(poly['ninnov'])
+    poly['stds'] = np.zeros(poly['ninnov'])
     poly['nquad'][0] = 3
     if poly['ninnov'] > 1:
         poly['nquad'][1] = 2
-    poly['ns'] = np.prod(poly['ngrid'])
+    if ngrid == 0:
+        poly['ns'] = 1
+    else:
+        poly['ns'] = np.prod(poly['ngrid'])
     poly['nqs'] = np.prod(poly['nquad'])
     poly['pgrid'],poly['bbt'],poly['bbtinv'] = po.nonsparsegrid(poly['nmsv'],poly['npoly'],poly['ncheb'])
     poly['msvbounds'] = np.zeros(2*poly['nmsv'])
@@ -34,6 +44,10 @@ def initialize_poly(nfunc,ncheb,ngrid,msvmax,shockmaxstd,eqswitch,shockswitch):
     poly['msvbounds'][poly['nmsv']] = msvmax[0]
     poly['msvbounds'][1] = -msvmax[1]
     poly['msvbounds'][poly['nmsv']+1] = msvmax[1]
+    if poly['ne'] == 0:
+        for i in np.arange(poly['ninnov']):
+            poly['msvbounds'][2+i] = msvmax[2+i]
+            poly['msvbounds'][poly['nmsv']+2+i] = -msvmax[2+i]
     return(poly)
 
 def get_quadstates(poly,paramplus):
@@ -45,20 +59,33 @@ def get_quadstates(poly,paramplus):
     npoly = poly['npoly']
     ne = ninnov
     quadgrid,quadweight = po.get_quadgrid(poly['nquad'],ninnov,nqs)
-    sfut = np.zeros([ns,nqs,ninnov])
-    ind_sfut = np.zeros([ns,nqs,ne],dtype=int)
+   
 
+    if poly['ne'] == 0:
+        nchebexog = np.prod(poly['ncheb'][2:])
+        pgridexog = poly['pgrid'][:nchebexog,2:poly['nmsv']]
+        ns = nchebexog
+        exoggrid = np.zeros([nchebexog,poly['nmsv']-2])
+        exogscxx2msv = poly['scxx2msv'][2:poly['nmsv']*2:poly['nmsv']]
+        for i in np.arange(ns):
+            exoggrid[i,:] = po.msv2xx(pgridexog[i,:],poly['nmsv']-2,exogscxx2msv)
+    else:
+        exoggrid = poly['exoggrid']
+        
+    sfut = np.zeros([ns,nqs,ninnov])
+    ind_sfut = np.zeros([ns,nqs,ne],dtype=int)    
     for j in np.arange(nqs):
         for i in np.arange(ns):
             if poly['shockswitch'] == 0:
-                sfut[i,j,0] = paramplus['rhobeta']*poly['exoggrid'][i,0] + paramplus['stdbeta']*quadgrid[j,0] #+ meanpreserve
-                if ne == 2:
-                    sfut[i,j,1] = paramplus['rhomu']*poly['exoggrid'][i,1] + paramplus['stdmu']*quadgrid[j,0]
+                sfut[i,j,0] = paramplus['rhobeta']*exoggrid[i,0] + paramplus['stdbeta']*quadgrid[j,0] 
+                if ninnov == 2:
+                    sfut[i,j,1] = paramplus['rhomu']*exoggrid[i,1] + paramplus['stdmu']*quadgrid[j,1]
             else:
-                sfut[i,j,0] = paramplus['rhomu']*poly['exoggrid'][i,0] + paramplus['stdmu']*quadgrid[j,0] #+ meanpreserve
-                if ne == 2:
-                    sfut[i,j,1] = paramplus['rhobeta']*poly['exoggrid'][i,1] + paramplus['stdbeta']*quadgrid[j,0]
-            ind_sfut[i,j,:] = po.get_index(sfut[i,j,:],ne,poly['ngrid'],poly['steps'],poly['bounds'])    
+                sfut[i,j,0] = paramplus['rhomu']*exoggrid[i,0] + paramplus['stdmu']*quadgrid[j,0]
+                if ninnov == 2:
+                    sfut[i,j,1] = paramplus['rhobeta']*exoggrid[i,1] + paramplus['stdbeta']*quadgrid[j,1]
+            if poly['ne'] > 0:
+                ind_sfut[i,j,:] = po.get_index(sfut[i,j,:],ninnov,poly['ngrid'],poly['steps'],poly['bounds'])    
     return(sfut,ind_sfut,quadweight)
 
 def get_griddetails(poly,paramplus):
@@ -75,19 +102,20 @@ def get_griddetails(poly,paramplus):
     if poly['shockswitch'] == 0:
         poly['rhos'][0] = paramplus['rhobeta']
         poly['stds'][0] = paramplus['stdbeta']
-        if poly['ne'] == 2:
+        if poly['ninnov'] == 2:
             poly['rhos'][1] = paramplus['rhomu']
             poly['stds'][1] = paramplus['stdmu']
     else:
         poly['rhos'][0] = paramplus['rhomu']
         poly['stds'][0] = paramplus['stdmu']
-        if poly['ne'] == 2:
+        if poly['ninnov'] == 2:
             poly['rhos'][1] = paramplus['rhobeta']
             poly['stds'][1] = paramplus['stdbeta']
-    
-    poly['exoggrid'],poly['exogindex'],poly['steps'],poly['bounds'],poly['ind2poly'] = po.get_exoggrid(poly['ngrid'],poly['ne'], \
-        poly['ns'],poly['rhos'],poly['stds'],poly['maxstd'])
-    poly['exoggrid'][:,0] = poly['exoggrid'][:,0]
+
+    if poly['ne'] > 0:
+        poly['exoggrid'],poly['exogindex'],poly['steps'],poly['bounds'],poly['ind2poly'] = po.get_exoggrid(poly['ngrid'],poly['ne'], \
+            poly['ns'],poly['rhos'],poly['stds'],poly['maxstd'])
+        poly['exoggrid'][:,0] = poly['exoggrid'][:,0]
 
     poly['quadgrid'],poly['quadweight'] = po.get_quadgrid(poly['nquad'],poly['ninnov'],poly['nqs'])
     poly['sfutquad'],poly['ind_sfutquad'],poly['quadweights'] = get_quadstates(poly,paramplus)
@@ -104,10 +132,14 @@ def get_initcoeffs(lcoeff,poly):
     acoeff0 = np.zeros([ns,nfunc*npoly])    
     for i in np.arange(ns):
         polyapp = np.zeros([npoly,nfunc])
-        shk = poly['exoggrid'][i,:]
+        if poly['ne'] > 0:
+            shk = poly['exoggrid'][i,:]
         for ip in np.arange(npoly):
             msvm1 = po.msv2xx(poly['pgrid'][ip,:],nmsv,poly['scxx2msv'])
-            msvm1plus = np.append(msvm1,shk)
+            if poly['ne'] == 0:
+                msvm1plus = msvm1
+            else:
+                msvm1plus = np.append(msvm1,shk)
             polyapp[ip,:] = np.dot(lcoeff,msvm1plus)
         alphass = np.dot(poly['bbtinv'],polyapp)
         for ip in np.arange(npoly):
@@ -186,21 +218,38 @@ def calc_euler(ind_state,gridindex,acoeff,poly,paramplus):
     msvm1 = po.msv2xx(poly['pgrid'][gridindex,:],nmsv,poly['scxx2msv'])
     kk = msvm1[0]
     invm1 = msvm1[1]
-    shocks = poly['exoggrid'][ind_state,:]
+    if ne == 0:
+        shocks = np.zeros(poly['ninnov'])
+        shocks[0] = msvm1[2]
+    else:
+        shocks = poly['exoggrid'][ind_state,:]
     (dvar,lvar) = modelvariables(polycur,msvm1,shocks,paramplus,poly['eqswitch'],poly['shockswitch'],poly['ne'])
-    msv = np.array([dvar['kp'],dvar['inv']])
-    
+       
     ind = npoly*ind_state+gridindex
-    ind_futmat = poly['ind_sfutquad'][ind_state,:,:] 
     ss_futmat = poly['sfutquad'][ind_state,:,:]
+    if ne > 0:
+        ind_futmat = poly['ind_sfutquad'][ind_state,:,:] 
+        msv = np.array([dvar['kp'],dvar['inv']])
+    else:
+        msv = np.zeros(nmsv)
+        msv[0] = dvar['kp']
+        msv[1] = dvar['inv']
 
     exp_qeq = 0.
     exp_ieq = 0.
     qweight = (1.0-paramplus['delta'])/paramplus['gamma']
     for j in np.arange(poly['nqs']):
-        xx1 = po.msv2xx(msv,nmsv,poly['scmsv2xx']) 
-        polyfut = po.get_linspline(xx1,ss_futmat[j,:],ind_futmat[j,:],acoeff,poly['exoggrid'],poly['steps'],poly['nfunc'],\
-            poly['ngrid'],npoly,nmsv,poly['ncheb'],ne)
+        if ne == 0:
+            msv[2] = ss_futmat[j,:]    
+        xx1 = po.msv2xx(msv,nmsv,poly['scmsv2xx'])
+        if ne == 0:
+            poly_xx = po.chebpolytensor(xx1,nmsv,npoly,poly['ncheb'])
+            polyfut = np.zeros(poly['nfunc'])
+            for ifunc in np.arange(poly['nfunc']):
+                polyfut[ifunc] = np.dot(acoeff[0,ifunc*npoly:(ifunc+1)*npoly],poly_xx)
+        else:
+            polyfut = po.get_linspline(xx1,ss_futmat[j,:],ind_futmat[j,:],acoeff,poly['exoggrid'],poly['steps'],poly['nfunc'],\
+                poly['ngrid'],npoly,nmsv,poly['ncheb'],ne)
         (dvarp,lvarp) = modelvariables(polyfut,msv,ss_futmat[j,:],paramplus,poly['eqswitch'],poly['shockswitch'],poly['ne'])
         if (poly['eqswitch'] == 0):
             exp_qeq = exp_qeq + poly['quadweight'][j]*qweight*dvarp['qq'] 
@@ -286,7 +335,6 @@ def decr(endogvarm1,innov,paramplus,acoeff,poly):
     endogvar = {}
     kk = endogvarm1['kp_d']
     invm1 = endogvarm1['inv_d']
-    msvm1 = np.array([kk,invm1])
     shocks = np.zeros(poly['ne'])
     if poly['shockswitch'] == 0:
         shocks[0] = paramplus['rhobeta']*endogvarm1['beta_d']+paramplus['stdbeta']*innov[0]
@@ -297,9 +345,17 @@ def decr(endogvarm1,innov,paramplus,acoeff,poly):
         if poly['ne'] == 2:
             shocks[1] = paramplus['rhobeta']*endogvarm1['beta_d']+paramplus['stdbeta']*innov[1]
             
-    ind_shocks = po.get_index(shocks,poly['ne'],poly['ngrid'],poly['steps'],poly['bounds'])    
-    xx1 = po.msv2xx(msvm1,poly['nmsv'],poly['scmsv2xx'])
-    polycur = po.get_linspline(xx1,shocks,ind_shocks,acoeff,poly['exoggrid'],poly['steps'],poly['nfunc'],\
+    if (poly['ne'] == 0):
+        msvm1 = np.array([kk,invm1,shocks[0]])
+        xx1 = po.msv2xx(msvm1,poly['nmsv'],poly['scmsv2xx'])
+        poly_xx = chebpolytensor(xx1,poly['nmsv'],poly['npoly'],poly['ncheb'])
+        for ifunc in np.arange(nfunc):
+            polycur[ifunc] = np.dot(acoeff[0,ifunc*poly['npoly']:(ifunc+1)*poly['npoly']],poly_xx)
+    else:
+        msvm1 = np.array([kk,invm1])        
+        ind_shocks = po.get_index(shocks,poly['ne'],poly['ngrid'],poly['steps'],poly['bounds'])    
+        xx1 = po.msv2xx(msvm1,poly['nmsv'],poly['scmsv2xx'])
+        polycur = po.get_linspline(xx1,shocks,ind_shocks,acoeff,poly['exoggrid'],poly['steps'],poly['nfunc'],\
             poly['ngrid'],poly['npoly'],poly['nmsv'],poly['ncheb'],poly['ne'])
     (dvar,lvar) = modelvariables(polycur,msvm1,shocks,paramplus,poly['eqswitch'],poly['shockswitch'],poly['ne'])
     for x in lvar:
